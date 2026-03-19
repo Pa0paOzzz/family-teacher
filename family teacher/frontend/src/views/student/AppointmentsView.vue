@@ -28,6 +28,10 @@
             <span>我的预约</span>
           </el-menu-item>
           <el-menu-item index="5">
+            <el-icon><Star /></el-icon>
+            <span>我的收藏</span>
+          </el-menu-item>
+          <el-menu-item index="6">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -125,7 +129,7 @@
 </template>
 
 <script>
-import { User, HomeFilled, EditPen, Calendar, SwitchButton } from '@element-plus/icons-vue';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
   name: 'StudentAppointmentsView',
@@ -134,6 +138,7 @@ export default {
     HomeFilled,
     EditPen,
     Calendar,
+    Star,
     SwitchButton
   },
   data() {
@@ -205,6 +210,9 @@ export default {
           this.$router.push('/student/appointments');
           break;
         case '5':
+          this.$router.push('/student/favorites');
+          break;
+        case '6':
           this.logout();
           break;
       }

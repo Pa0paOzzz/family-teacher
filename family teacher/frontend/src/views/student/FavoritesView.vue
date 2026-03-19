@@ -1,5 +1,5 @@
 <template>
-  <div class="student-home">
+  <div class="student-favorites">
     <el-container style="height: 100vh;">
       <el-aside width="200px" class="sidebar">
         <div class="logo">
@@ -38,66 +38,56 @@
         </el-menu>
       </el-aside>
       <el-main>
-        <div class="main-content">
-          <div class="search-container">
-            <el-input
-              v-model="searchSubject"
-              placeholder="搜索学科"
-              style="width: 300px; margin-right: 10px;"
-              @keyup.enter="searchJobPosts"
-            ></el-input>
-            <el-button type="primary" @click="searchJobPosts">搜索</el-button>
-            <el-button @click="resetSearch">重置</el-button>
-          </div>
-          
-          <div class="job-posts-container">
-            <h2>教师求职信息</h2>
-            <el-row :gutter="20">
-              <el-col :span="8" v-for="jobPost in jobPostList" :key="jobPost.id">
-                <el-card class="job-post-card" shadow="hover">
-                  <template #header>
-                    <div class="card-header">
-                      <span class="title">{{ jobPost.title }}</span>
-                      <el-tag type="success">{{ jobPost.subject }}</el-tag>
-                    </div>
-                  </template>
-                  <div class="card-content">
-                    <p class="description">{{ jobPost.description }}</p>
-                    <div class="info-row">
-                      <el-icon><User /></el-icon>
-                      <span>{{ jobPost.teacher?.user?.name || '未知' }}</span>
-                    </div>
-                    <div class="info-row">
-                      <el-icon><School /></el-icon>
-                      <span>{{ jobPost.teacher?.school || '未知学校' }}</span>
-                    </div>
-                    <div class="info-row">
-                      <el-icon><Location /></el-icon>
-                      <span>{{ jobPost.location }}</span>
-                    </div>
-                    <div class="info-row">
-                      <el-icon><Clock /></el-icon>
-                      <span>{{ jobPost.availability }}</span>
-                    </div>
-                    <div class="price-row">
-                      <span class="price">¥{{ jobPost.pricePerHour }}/小时</span>
-                      <el-button type="primary" size="small" @click="openAppointmentDialog(jobPost)">预约</el-button>
+        <div class="favorites-container">
+          <h2>我的收藏</h2>
+          <el-row :gutter="20">
+            <el-col :span="8" v-for="favorite in favoriteList" :key="favorite.id">
+              <el-card class="favorite-card" shadow="hover">
+                <template #header>
+                  <div class="card-header">
+                    <span class="title">{{ favorite.resource?.title || '未知标题' }}</span>
+                    <el-tag type="success">{{ favorite.resource?.subject || '未知学科' }}</el-tag>
+                  </div>
+                </template>
+                <div class="card-content">
+                  <p class="description">{{ favorite.resource?.description || '暂无描述' }}</p>
+                  <div class="info-row">
+                    <el-icon><User /></el-icon>
+                    <span>{{ favorite.resource?.teacher?.name || '未知' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <el-icon><School /></el-icon>
+                    <span>{{ favorite.resource?.teacher?.school || '未知学校' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <el-icon><Location /></el-icon>
+                    <span>{{ favorite.resource?.location || '未知地点' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <el-icon><Clock /></el-icon>
+                    <span>{{ favorite.resource?.availability || '未知时间' }}</span>
+                  </div>
+                  <div class="price-row">
+                    <span class="price">¥{{ favorite.resource?.pricePerHour || 0 }}/小时</span>
+                    <div>
+                      <el-button type="primary" size="small" @click="openAppointmentDialog(favorite)">预约</el-button>
+                      <el-button type="danger" size="small" @click="removeFavorite(favorite)">取消收藏</el-button>
                     </div>
                   </div>
-                </el-card>
-              </el-col>
-            </el-row>
-            <el-empty v-if="jobPostList.length === 0" description="暂无教师求职信息"></el-empty>
-          </div>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+          <el-empty v-if="favoriteList.length === 0" description="暂无收藏"></el-empty>
         </div>
         
         <el-dialog v-model="appointmentDialogVisible" title="预约教师" width="500px">
           <el-form :model="appointmentForm" label-width="100px">
             <el-form-item label="老师姓名">
-              <el-input :value="selectedJobPost?.teacher?.user?.name" disabled></el-input>
+              <el-input :value="selectedFavorite?.resource?.teacher?.name" disabled></el-input>
             </el-form-item>
             <el-form-item label="学科">
-              <el-input :value="selectedJobPost?.subject" disabled></el-input>
+              <el-input :value="selectedFavorite?.resource?.subject" disabled></el-input>
             </el-form-item>
             <el-form-item label="预约时间">
               <el-date-picker
@@ -122,11 +112,11 @@
 </template>
 
 <script>
-import { jobPostApi, appointmentApi } from '../../api/api';
+import { favoriteApi, appointmentApi } from '../../api/api';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
-  name: 'StudentHomeView',
+  name: 'StudentFavoritesView',
   components: {
     User,
     School,
@@ -140,11 +130,10 @@ export default {
   },
   data() {
     return {
-      activeIndex: '1',
-      searchSubject: '',
-      jobPostList: [],
+      activeIndex: '5',
+      favoriteList: [],
       appointmentDialogVisible: false,
-      selectedJobPost: null,
+      selectedFavorite: null,
       appointmentForm: {
         appointmentTime: '',
         remark: ''
@@ -152,7 +141,7 @@ export default {
     }
   },
   mounted() {
-    this.loadJobPosts();
+    this.loadFavorites();
   },
   methods: {
     handleMenuSelect(index) {
@@ -177,36 +166,30 @@ export default {
           break;
       }
     },
-    async loadJobPosts() {
+    async loadFavorites() {
       try {
-        const response = await jobPostApi.getList();
-        this.jobPostList = response || [];
+        const response = await favoriteApi.getList('TEACHER_JOB_POST');
+        this.favoriteList = response || [];
       } catch (error) {
-        console.error('加载教师求职信息失败:', error);
-        this.$message.error('加载教师求职信息失败');
+        console.error('加载收藏失败:', error);
+        this.$message.error('加载收藏失败');
       }
     },
-    async searchJobPosts() {
-      if (!this.searchSubject.trim()) {
-        this.loadJobPosts();
-        return;
-      }
+    async removeFavorite(favorite) {
       try {
-        const response = await jobPostApi.getList();
-        this.jobPostList = (response || []).filter(post => 
-          post.subject && post.subject.toLowerCase().includes(this.searchSubject.toLowerCase())
-        );
+        await favoriteApi.remove({
+          resourceType: 'TEACHER_JOB_POST',
+          resourceId: favorite.resourceId
+        });
+        this.$message.success('已取消收藏');
+        this.loadFavorites();
       } catch (error) {
-        console.error('搜索失败:', error);
-        this.$message.error('搜索失败');
+        console.error('取消收藏失败:', error);
+        this.$message.error('取消收藏失败');
       }
     },
-    resetSearch() {
-      this.searchSubject = '';
-      this.loadJobPosts();
-    },
-    openAppointmentDialog(jobPost) {
-      this.selectedJobPost = jobPost;
+    openAppointmentDialog(favorite) {
+      this.selectedFavorite = favorite;
       this.appointmentDialogVisible = true;
     },
     async submitAppointment() {
@@ -216,7 +199,7 @@ export default {
       }
       try {
         await appointmentApi.create({
-          teacherId: this.selectedJobPost.teacher?.id,
+          teacherId: this.selectedFavorite.resource?.teacher?.id,
           appointmentTime: this.appointmentForm.appointmentTime,
           remark: this.appointmentForm.remark
         });
@@ -242,7 +225,7 @@ export default {
 </script>
 
 <style scoped>
-.student-home {
+.student-favorites {
   min-height: 100vh;
   background-color: #f5f7fa;
 }
@@ -301,30 +284,21 @@ export default {
   background-color: #263445;
 }
 
-.main-content {
+.favorites-container {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
   min-height: calc(100vh - 40px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.search-container {
-  margin-bottom: 20px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-}
-
-.job-posts-container {
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  min-height: calc(100vh - 140px);
-}
-
-.job-posts-container h2 {
+.favorites-container h2 {
   margin-bottom: 20px;
   color: #303133;
 }
 
-.job-post-card {
+.favorite-card {
   margin-bottom: 20px;
 }
 

@@ -41,6 +41,11 @@ const routes = [
     component: () => import('../views/student/AppointmentsView.vue')
   },
   {
+    path: '/student/favorites',
+    name: 'StudentFavorites',
+    component: () => import('../views/student/FavoritesView.vue')
+  },
+  {
     path: '/teacher/home',
     name: 'TeacherHome',
     component: () => import('../views/teacher/HomeView.vue')
@@ -59,6 +64,11 @@ const routes = [
     path: '/teacher/appointments',
     name: 'TeacherAppointments',
     component: () => import('../views/teacher/AppointmentsView.vue')
+  },
+  {
+    path: '/teacher/favorites',
+    name: 'TeacherFavorites',
+    component: () => import('../views/teacher/FavoritesView.vue')
   },
   {
     path: '/admin/dashboard',

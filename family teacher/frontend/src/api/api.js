@@ -99,4 +99,12 @@ export const recommendationApi = {
   getStudents: (params) => api.get('/recommendations/students', { params })
 };
 
+// 收藏相关API
+export const favoriteApi = {
+  add: (data) => api.post('/favorites/add', data),
+  remove: (data) => api.delete('/favorites/remove', { data }),
+  getList: (resourceType) => api.get('/favorites/list', { params: { resourceType } }),
+  check: (resourceType, resourceId) => api.get('/favorites/check', { params: { resourceType, resourceId } })
+};
+
 export default api;
