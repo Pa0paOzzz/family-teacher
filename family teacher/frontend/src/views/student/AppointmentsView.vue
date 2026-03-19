@@ -43,7 +43,6 @@
           <el-tabs type="border-card">
             <el-tab-pane label="待处理">
               <el-table :data="pendingAppointments" style="width: 100%">
-                <el-table-column prop="id" label="预约ID"></el-table-column>
                 <el-table-column prop="teacherName" label="家教老师"></el-table-column>
                 <el-table-column prop="subject" label="学科"></el-table-column>
                 <el-table-column prop="requestedDate" label="预约日期"></el-table-column>
@@ -57,14 +56,14 @@
                 </el-table-column>
                 <el-table-column label="操作">
                   <template #default="scope">
-                    <el-button type="danger" size="small">取消</el-button>
+                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">查看详情</el-button>
+                    <el-button type="danger" size="small" @click="cancelAppointment(scope.row.id)">取消</el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
             <el-tab-pane label="已接受">
               <el-table :data="acceptedAppointments" style="width: 100%">
-                <el-table-column prop="id" label="预约ID"></el-table-column>
                 <el-table-column prop="teacherName" label="家教老师"></el-table-column>
                 <el-table-column prop="subject" label="学科"></el-table-column>
                 <el-table-column prop="requestedDate" label="预约日期"></el-table-column>
@@ -78,14 +77,13 @@
                 </el-table-column>
                 <el-table-column label="操作">
                   <template #default="scope">
-                    <el-button type="primary" size="small">查看详情</el-button>
+                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">查看详情</el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
             <el-tab-pane label="已完成">
               <el-table :data="completedAppointments" style="width: 100%">
-                <el-table-column prop="id" label="预约ID"></el-table-column>
                 <el-table-column prop="teacherName" label="家教老师"></el-table-column>
                 <el-table-column prop="subject" label="学科"></el-table-column>
                 <el-table-column prop="requestedDate" label="预约日期"></el-table-column>
@@ -99,15 +97,13 @@
                 </el-table-column>
                 <el-table-column label="操作">
                   <template #default="scope">
-                    <el-button type="primary" size="small">评价</el-button>
-                    <el-button size="small">查看订单</el-button>
+                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">查看详情</el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
             <el-tab-pane label="已拒绝">
               <el-table :data="rejectedAppointments" style="width: 100%">
-                <el-table-column prop="id" label="预约ID"></el-table-column>
                 <el-table-column prop="teacherName" label="家教老师"></el-table-column>
                 <el-table-column prop="subject" label="学科"></el-table-column>
                 <el-table-column prop="requestedDate" label="预约日期"></el-table-column>
@@ -123,12 +119,49 @@
             </el-tab-pane>
           </el-tabs>
         </div>
+        
+        <el-dialog v-model="detailDialogVisible" title="预约详情" width="700px">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="预约ID" :span="2">
+              {{ selectedAppointment?.id || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="家教老师" :span="2">
+              {{ selectedAppointment?.teacherName || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学科">
+              {{ selectedAppointment?.subject || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="预约日期">
+              {{ selectedAppointment?.requestedDate || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="预约时间">
+              {{ selectedAppointment?.requestedTime || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地点" :span="2">
+              {{ selectedAppointment?.location || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="价格/小时">
+              ¥{{ selectedAppointment?.pricePerHour || 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusType(selectedAppointment?.status)">{{ selectedAppointment?.status || '未知' }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">
+              {{ selectedAppointment?.notes || '无' }}
+            </el-descriptions-item>
+          </el-descriptions>
+          
+          <template #footer>
+            <el-button @click="detailDialogVisible = false">关闭</el-button>
+          </template>
+        </el-dialog>
       </el-main>
     </el-container>
   </div>
 </template>
 
 <script>
+import { appointmentApi } from '../../api/api';
 import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
@@ -144,55 +177,21 @@ export default {
   data() {
     return {
       activeIndex: '4',
-      pendingAppointments: [
-        {
-          id: 1,
-          teacherName: '李四',
-          subject: '数学',
-          requestedDate: '2026-03-15',
-          requestedTime: '14:00-16:00',
-          location: '北京市海淀区',
-          pricePerHour: 100,
-          status: 'PENDING'
-        }
-      ],
-      acceptedAppointments: [
-        {
-          id: 2,
-          teacherName: '王五',
-          subject: '英语',
-          requestedDate: '2026-03-10',
-          requestedTime: '10:00-12:00',
-          location: '北京市朝阳区',
-          pricePerHour: 120,
-          status: 'ACCEPTED'
-        }
-      ],
-      completedAppointments: [
-        {
-          id: 3,
-          teacherName: '赵六',
-          subject: '物理',
-          requestedDate: '2026-03-05',
-          requestedTime: '16:00-18:00',
-          location: '北京市海淀区',
-          pricePerHour: 150,
-          status: 'COMPLETED'
-        }
-      ],
-      rejectedAppointments: [
-        {
-          id: 4,
-          teacherName: '钱七',
-          subject: '化学',
-          requestedDate: '2026-03-01',
-          requestedTime: '09:00-11:00',
-          location: '北京市西城区',
-          pricePerHour: 130,
-          status: 'REJECTED'
-        }
-      ]
+      pendingAppointments: [],
+      acceptedAppointments: [],
+      completedAppointments: [],
+      rejectedAppointments: [],
+      detailDialogVisible: false,
+      selectedAppointment: null,
+      refreshInterval: null
     }
+  },
+  mounted() {
+    this.loadAppointments();
+    this.startAutoRefresh();
+  },
+  beforeUnmount() {
+    this.stopAutoRefresh();
   },
   methods: {
     handleMenuSelect(index) {
@@ -215,6 +214,57 @@ export default {
         case '6':
           this.logout();
           break;
+      }
+    },
+    async loadAppointments() {
+      try {
+        const response = await appointmentApi.getList();
+        this.pendingAppointments = (response || []).filter(app => app.status === 'PENDING');
+        this.acceptedAppointments = (response || []).filter(app => app.status === 'ACCEPTED');
+        this.completedAppointments = (response || []).filter(app => app.status === 'COMPLETED');
+        this.rejectedAppointments = (response || []).filter(app => app.status === 'REJECTED');
+      } catch (error) {
+        console.error('加载预约列表失败:', error);
+        this.$message.error('加载预约列表失败');
+      }
+    },
+    async cancelAppointment(id) {
+      try {
+        await appointmentApi.delete(id);
+        this.$message.success('预约已取消');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('取消预约失败:', error);
+        this.$message.error('取消预约失败');
+      }
+    },
+    openDetailDialog(appointment) {
+      this.selectedAppointment = appointment;
+      this.detailDialogVisible = true;
+    },
+    getStatusType(status) {
+      switch(status) {
+        case 'PENDING':
+          return 'warning';
+        case 'ACCEPTED':
+          return 'success';
+        case 'COMPLETED':
+          return 'info';
+        case 'REJECTED':
+          return 'danger';
+        default:
+          return '';
+      }
+    },
+    startAutoRefresh() {
+      this.refreshInterval = setInterval(() => {
+        this.loadAppointments();
+      }, 5000);
+    },
+    stopAutoRefresh() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+        this.refreshInterval = null;
       }
     },
     logout() {

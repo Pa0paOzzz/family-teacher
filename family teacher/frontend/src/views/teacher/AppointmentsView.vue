@@ -131,6 +131,7 @@
 </template>
 
 <script>
+import { appointmentApi } from '../../api/api';
 import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
@@ -146,55 +147,19 @@ export default {
   data() {
     return {
       activeIndex: '4',
-      pendingAppointments: [
-        {
-          id: 1,
-          studentName: '张三',
-          subject: '数学',
-          requestedDate: '2026-03-15',
-          requestedTime: '14:00-16:00',
-          location: '北京市海淀区',
-          pricePerHour: 100,
-          status: 'PENDING'
-        }
-      ],
-      acceptedAppointments: [
-        {
-          id: 2,
-          studentName: '李四',
-          subject: '英语',
-          requestedDate: '2026-03-10',
-          requestedTime: '10:00-12:00',
-          location: '北京市朝阳区',
-          pricePerHour: 120,
-          status: 'ACCEPTED'
-        }
-      ],
-      completedAppointments: [
-        {
-          id: 3,
-          studentName: '王五',
-          subject: '物理',
-          requestedDate: '2026-03-05',
-          requestedTime: '16:00-18:00',
-          location: '北京市海淀区',
-          pricePerHour: 150,
-          status: 'COMPLETED'
-        }
-      ],
-      rejectedAppointments: [
-        {
-          id: 4,
-          studentName: '赵六',
-          subject: '化学',
-          requestedDate: '2026-03-01',
-          requestedTime: '09:00-11:00',
-          location: '北京市西城区',
-          pricePerHour: 130,
-          status: 'REJECTED'
-        }
-      ]
+      pendingAppointments: [],
+      acceptedAppointments: [],
+      completedAppointments: [],
+      rejectedAppointments: [],
+      refreshInterval: null
     }
+  },
+  mounted() {
+    this.loadAppointments();
+    this.startAutoRefresh();
+  },
+  beforeUnmount() {
+    this.stopAutoRefresh();
   },
   methods: {
     handleMenuSelect(index) {
@@ -219,17 +184,58 @@ export default {
           break;
       }
     },
-    acceptAppointment(id) {
-      console.log('接受预约', id);
-      this.$message.success('预约已接受');
+    async loadAppointments() {
+      try {
+        const response = await appointmentApi.getList();
+        this.pendingAppointments = (response || []).filter(app => app.status === 'PENDING');
+        this.acceptedAppointments = (response || []).filter(app => app.status === 'ACCEPTED');
+        this.completedAppointments = (response || []).filter(app => app.status === 'COMPLETED');
+        this.rejectedAppointments = (response || []).filter(app => app.status === 'REJECTED');
+      } catch (error) {
+        console.error('加载预约列表失败:', error);
+        this.$message.error('加载预约列表失败');
+      }
     },
-    rejectAppointment(id) {
-      console.log('拒绝预约', id);
-      this.$message.success('预约已拒绝');
+    async acceptAppointment(id) {
+      try {
+        await appointmentApi.update(id, { status: 'ACCEPTED' });
+        this.$message.success('预约已接受');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('接受预约失败:', error);
+        this.$message.error('接受预约失败');
+      }
     },
-    completeAppointment(id) {
-      console.log('完成预约', id);
-      this.$message.success('预约已完成');
+    async rejectAppointment(id) {
+      try {
+        await appointmentApi.update(id, { status: 'REJECTED' });
+        this.$message.success('预约已拒绝');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('拒绝预约失败:', error);
+        this.$message.error('拒绝预约失败');
+      }
+    },
+    async completeAppointment(id) {
+      try {
+        await appointmentApi.update(id, { status: 'COMPLETED' });
+        this.$message.success('预约已完成');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('完成预约失败:', error);
+        this.$message.error('完成预约失败');
+      }
+    },
+    startAutoRefresh() {
+      this.refreshInterval = setInterval(() => {
+        this.loadAppointments();
+      }, 5000);
+    },
+    stopAutoRefresh() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+        this.refreshInterval = null;
+      }
     },
     logout() {
       localStorage.removeItem('token');

@@ -88,7 +88,10 @@
                   </div>
                   <div class="budget-row">
                     <span class="budget">预算: ¥{{ request.budgetPerHour }}/小时</span>
-                    <el-button type="primary" size="small" @click="openContactDialog(request)">联系学生</el-button>
+                    <div>
+                      <el-button type="info" size="small" @click="openDetailDialog(request)">查看详情</el-button>
+                      <el-button type="primary" size="small" @click="openContactDialog(request)">联系学生</el-button>
+                    </div>
                   </div>
                 </div>
               </el-card>
@@ -119,6 +122,63 @@
             <el-button @click="contactDialogVisible = false">关闭</el-button>
           </template>
         </el-dialog>
+
+        <el-dialog v-model="detailDialogVisible" title="需求详情" width="700px">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="需求标题" :span="2">
+              {{ selectedRequest?.title || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学科">
+              {{ selectedRequest?.subject || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="预算/小时">
+              ¥{{ selectedRequest?.budgetPerHour || 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地点" :span="2">
+              {{ selectedRequest?.location || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="期望时间" :span="2">
+              {{ selectedRequest?.preferredTime || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="需求描述" :span="2">
+              {{ selectedRequest?.description || '暂无描述' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="发布时间" :span="2">
+              {{ selectedRequest?.createdAt || '未知' }}
+            </el-descriptions-item>
+          </el-descriptions>
+          
+          <el-divider content-position="left">学生信息</el-divider>
+          
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="学生姓名">
+              {{ selectedRequest?.student?.user?.name || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学校">
+              {{ selectedRequest?.student?.school || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="年级">
+              {{ selectedRequest?.student?.grade || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="专业">
+              {{ selectedRequest?.student?.major || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="联系电话">
+              {{ selectedRequest?.student?.user?.phone || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              {{ selectedRequest?.student?.user?.email || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地址" :span="2">
+              {{ selectedRequest?.student?.address || '未填写' }}
+            </el-descriptions-item>
+          </el-descriptions>
+          
+          <template #footer>
+            <el-button @click="detailDialogVisible = false">关闭</el-button>
+            <el-button type="primary" @click="contactFromDetail">联系学生</el-button>
+          </template>
+        </el-dialog>
       </el-main>
     </el-container>
   </div>
@@ -147,6 +207,7 @@ export default {
       searchSubject: '',
       requestList: [],
       contactDialogVisible: false,
+      detailDialogVisible: false,
       selectedRequest: null,
       contactForm: {
         message: ''
@@ -210,6 +271,14 @@ export default {
     },
     openContactDialog(request) {
       this.selectedRequest = request;
+      this.contactDialogVisible = true;
+    },
+    openDetailDialog(request) {
+      this.selectedRequest = request;
+      this.detailDialogVisible = true;
+    },
+    contactFromDetail() {
+      this.detailDialogVisible = false;
       this.contactDialogVisible = true;
     },
     logout() {
