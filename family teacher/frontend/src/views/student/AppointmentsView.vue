@@ -1,27 +1,41 @@
 <template>
   <div class="student-appointments">
-    <el-container>
-      <el-header height="80px">
-        <div class="header-content">
-          <h1>学生个人中心</h1>
-          <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
-            <el-menu-item index="1">
-              <router-link to="/student/profile">个人资料</router-link>
-            </el-menu-item>
-            <el-menu-item index="2">
-              <router-link to="/student/tutoring-request">发布需求</router-link>
-            </el-menu-item>
-            <el-menu-item index="3">
-              <router-link to="/student/appointments">我的预约</router-link>
-            </el-menu-item>
-            <el-menu-item index="4" @click="logout">退出登录</el-menu-item>
-          </el-menu>
+    <el-container style="height: 100vh;">
+      <el-aside width="200px" class="sidebar">
+        <div class="logo">
+          <h2>家教平台</h2>
+          <p>学生端</p>
         </div>
-      </el-header>
+        <el-menu
+          :default-active="activeIndex"
+          class="sidebar-menu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="1">
+            <el-icon><HomeFilled /></el-icon>
+            <span>首页</span>
+          </el-menu-item>
+          <el-menu-item index="2">
+            <el-icon><User /></el-icon>
+            <span>个人资料</span>
+          </el-menu-item>
+          <el-menu-item index="3">
+            <el-icon><EditPen /></el-icon>
+            <span>发布需求</span>
+          </el-menu-item>
+          <el-menu-item index="4">
+            <el-icon><Calendar /></el-icon>
+            <span>我的预约</span>
+          </el-menu-item>
+          <el-menu-item index="5">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出登录</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
       <el-main>
         <div class="appointments-container">
           <h2>我的预约</h2>
-          
           <el-tabs type="border-card">
             <el-tab-pane label="待处理">
               <el-table :data="pendingAppointments" style="width: 100%">
@@ -44,7 +58,6 @@
                 </el-table-column>
               </el-table>
             </el-tab-pane>
-            
             <el-tab-pane label="已接受">
               <el-table :data="acceptedAppointments" style="width: 100%">
                 <el-table-column prop="id" label="预约ID"></el-table-column>
@@ -66,7 +79,6 @@
                 </el-table-column>
               </el-table>
             </el-tab-pane>
-            
             <el-tab-pane label="已完成">
               <el-table :data="completedAppointments" style="width: 100%">
                 <el-table-column prop="id" label="预约ID"></el-table-column>
@@ -89,7 +101,6 @@
                 </el-table-column>
               </el-table>
             </el-tab-pane>
-            
             <el-tab-pane label="已拒绝">
               <el-table :data="rejectedAppointments" style="width: 100%">
                 <el-table-column prop="id" label="预约ID"></el-table-column>
@@ -114,11 +125,20 @@
 </template>
 
 <script>
+import { User, HomeFilled, EditPen, Calendar, SwitchButton } from '@element-plus/icons-vue';
+
 export default {
   name: 'StudentAppointmentsView',
+  components: {
+    User,
+    HomeFilled,
+    EditPen,
+    Calendar,
+    SwitchButton
+  },
   data() {
     return {
-      activeIndex: '3',
+      activeIndex: '4',
       pendingAppointments: [
         {
           id: 1,
@@ -170,8 +190,26 @@ export default {
     }
   },
   methods: {
+    handleMenuSelect(index) {
+      switch(index) {
+        case '1':
+          this.$router.push('/student/home');
+          break;
+        case '2':
+          this.$router.push('/student/profile');
+          break;
+        case '3':
+          this.$router.push('/student/tutoring-request');
+          break;
+        case '4':
+          this.$router.push('/student/appointments');
+          break;
+        case '5':
+          this.logout();
+          break;
+      }
+    },
     logout() {
-      // 清除本地存储的token和用户信息
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       localStorage.removeItem('role');
@@ -184,28 +222,68 @@ export default {
 <style scoped>
 .student-appointments {
   min-height: 100vh;
+  background-color: #f5f7fa;
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 100%;
-  padding: 0 20px;
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  background-color: #304156;
+  color: white;
+  z-index: 1000;
 }
 
-.header-content h1 {
-  color: #409EFF;
+.el-main {
+  padding: 20px;
+  background-color: #f5f7fa;
+  margin-left: 200px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.logo {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid #3a4a5b;
+}
+
+.logo h2 {
   margin: 0;
+  color: #409EFF;
+  font-size: 20px;
+}
+
+.logo p {
+  margin: 5px 0 0 0;
+  color: #bfcbd9;
+  font-size: 12px;
+}
+
+.sidebar-menu {
+  border: none;
+  background-color: #304156;
+}
+
+.sidebar-menu .el-menu-item {
+  color: #bfcbd9;
+}
+
+.sidebar-menu .el-menu-item:hover {
+  background-color: #263445;
+}
+
+.sidebar-menu .el-menu-item.is-active {
+  color: #409EFF;
+  background-color: #263445;
 }
 
 .appointments-container {
-  width: 1200px;
-  margin: 50px auto;
   padding: 30px;
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  min-height: calc(100vh - 40px);
 }
 
 .appointments-container h2 {

@@ -1,23 +1,34 @@
 <template>
   <div class="admin-dashboard">
-    <el-container>
-      <el-header height="80px">
-        <div class="header-content">
-          <h1>后台管理系统</h1>
-          <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal">
-            <el-menu-item index="1">
-              <router-link to="/admin/dashboard">仪表板</router-link>
-            </el-menu-item>
-            <el-menu-item index="2">
-              <router-link to="/admin/users">用户管理</router-link>
-            </el-menu-item>
-            <el-menu-item index="3">
-              <router-link to="/admin/appointments">预约管理</router-link>
-            </el-menu-item>
-            <el-menu-item index="4" @click="logout">退出登录</el-menu-item>
-          </el-menu>
+    <el-container style="height: 100vh;">
+      <el-aside width="200px" class="sidebar">
+        <div class="logo">
+          <h2>家教平台</h2>
+          <p>管理员端</p>
         </div>
-      </el-header>
+        <el-menu
+          :default-active="activeIndex"
+          class="sidebar-menu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="1">
+            <el-icon><DataLine /></el-icon>
+            <span>仪表板</span>
+          </el-menu-item>
+          <el-menu-item index="2">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="3">
+            <el-icon><Calendar /></el-icon>
+            <span>预约管理</span>
+          </el-menu-item>
+          <el-menu-item index="4">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出登录</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
       <el-main>
         <div class="dashboard-container">
           <h2>系统概览</h2>
@@ -116,8 +127,16 @@
 </template>
 
 <script>
+import { User, DataLine, Calendar, SwitchButton } from '@element-plus/icons-vue';
+
 export default {
   name: 'AdminDashboardView',
+  components: {
+    User,
+    DataLine,
+    Calendar,
+    SwitchButton
+  },
   data() {
     return {
       activeIndex: '1',
@@ -133,8 +152,23 @@ export default {
     }
   },
   methods: {
+    handleMenuSelect(index) {
+      switch(index) {
+        case '1':
+          this.$router.push('/admin/dashboard');
+          break;
+        case '2':
+          this.$router.push('/admin/users');
+          break;
+        case '3':
+          this.$router.push('/admin/appointments');
+          break;
+        case '4':
+          this.logout();
+          break;
+      }
+    },
     logout() {
-      // 清除本地存储的token和用户信息
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       localStorage.removeItem('role');
@@ -147,28 +181,68 @@ export default {
 <style scoped>
 .admin-dashboard {
   min-height: 100vh;
+  background-color: #f5f7fa;
 }
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 100%;
-  padding: 0 20px;
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  background-color: #304156;
+  color: white;
+  z-index: 1000;
 }
 
-.header-content h1 {
-  color: #409EFF;
+.el-main {
+  padding: 20px;
+  background-color: #f5f7fa;
+  margin-left: 200px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.logo {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid #3a4a5b;
+}
+
+.logo h2 {
   margin: 0;
+  color: #409EFF;
+  font-size: 20px;
+}
+
+.logo p {
+  margin: 5px 0 0 0;
+  color: #bfcbd9;
+  font-size: 12px;
+}
+
+.sidebar-menu {
+  border: none;
+  background-color: #304156;
+}
+
+.sidebar-menu .el-menu-item {
+  color: #bfcbd9;
+}
+
+.sidebar-menu .el-menu-item:hover {
+  background-color: #263445;
+}
+
+.sidebar-menu .el-menu-item.is-active {
+  color: #409EFF;
+  background-color: #263445;
 }
 
 .dashboard-container {
-  width: 1200px;
-  margin: 50px auto;
   padding: 30px;
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  min-height: calc(100vh - 40px);
 }
 
 .dashboard-container h2 {

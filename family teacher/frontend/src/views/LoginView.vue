@@ -65,9 +65,9 @@ export default {
               this.$message.success('登录成功');
               
               if (response.role === 'STUDENT') {
-                this.$router.push('/student/profile');
+                this.$router.push('/student/home');
               } else if (response.role === 'TEACHER') {
-                this.$router.push('/teacher/profile');
+                this.$router.push('/teacher/home');
               } else if (response.role === 'ADMIN') {
                 this.$router.push('/admin/dashboard');
               } else {

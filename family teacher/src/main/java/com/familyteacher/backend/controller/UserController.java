@@ -8,7 +8,9 @@ import com.familyteacher.backend.service.StudentService;
 import com.familyteacher.backend.service.TeacherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/users")
@@ -34,25 +36,108 @@ public class UserController {
         String token = userService.login(username, password);
         if (token != null) {
             User user = userService.findByUsername(username).orElse(null);
-            Map<String, Object> response = new java.util.HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("username", username);
             response.put("role", user.getRole());
+            response.put("userId", user.getId());
             return response;
         }
-        // 登录失败，返回错误信息
-        Map<String, Object> errorResponse = new java.util.HashMap<>();
+        Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("error", "Invalid username or password");
         return errorResponse;
     }
     
+    @GetMapping("/profile")
+    public Map<String, Object> getCurrentUserProfile(HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "No token provided");
+            return error;
+        }
+        
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return error;
+        }
+        
+        return userService.getUserProfile(user);
+    }
+    
+    @GetMapping("/student/profile")
+    public Map<String, Object> getStudentProfile(HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "No token provided");
+            return error;
+        }
+        
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return error;
+        }
+        
+        Map<String, Object> profile = userService.getStudentProfile(user);
+        if (profile == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Student profile not found");
+            return error;
+        }
+        return profile;
+    }
+    
+    @GetMapping("/teacher/profile")
+    public Map<String, Object> getTeacherProfile(HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "No token provided");
+            return error;
+        }
+        
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return error;
+        }
+        
+        Map<String, Object> profile = userService.getTeacherProfile(user);
+        if (profile == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Teacher profile not found");
+            return error;
+        }
+        return profile;
+    }
+    
     @PostMapping("/student/profile")
-    public Student createStudentProfile(@RequestBody Student student) {
+    public Student createStudentProfile(@RequestBody Student student, HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token != null) {
+            User user = userService.getUserFromToken(token);
+            if (user != null) {
+                student.setUser(user);
+            }
+        }
         return studentService.saveStudent(student);
     }
     
     @PostMapping("/teacher/profile")
-    public Teacher createTeacherProfile(@RequestBody Teacher teacher) {
+    public Teacher createTeacherProfile(@RequestBody Teacher teacher, HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token != null) {
+            User user = userService.getUserFromToken(token);
+            if (user != null) {
+                teacher.setUser(user);
+            }
+        }
         return teacherService.saveTeacher(teacher);
     }
     
@@ -62,12 +147,48 @@ public class UserController {
     }
     
     @PutMapping("/student/update")
-    public Student updateStudentProfile(@RequestBody Student student) {
-        return studentService.updateStudent(student);
+    public Map<String, Object> updateStudentProfile(@RequestBody Map<String, Object> profileData, HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "No token provided");
+            return error;
+        }
+        
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return error;
+        }
+        
+        return userService.updateStudentProfile(user, profileData);
     }
     
     @PutMapping("/teacher/update")
-    public Teacher updateTeacherProfile(@RequestBody Teacher teacher) {
-        return teacherService.updateTeacher(teacher);
+    public Map<String, Object> updateTeacherProfile(@RequestBody Map<String, Object> profileData, HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "No token provided");
+            return error;
+        }
+        
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "User not found");
+            return error;
+        }
+        
+        return userService.updateTeacherProfile(user, profileData);
+    }
+    
+    private String extractToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 }

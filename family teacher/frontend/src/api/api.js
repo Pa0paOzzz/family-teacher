@@ -45,13 +45,18 @@ export const userApi = {
   login: (data) => api.post('/users/login', data),
   register: (data) => api.post('/users/register', data),
   getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data)
+  updateProfile: (data) => api.put('/users/profile', data),
+  getStudentProfile: () => api.get('/users/student/profile'),
+  getTeacherProfile: () => api.get('/users/teacher/profile'),
+  updateStudentProfile: (data) => api.put('/users/student/update', data),
+  updateTeacherProfile: (data) => api.put('/users/teacher/update', data)
 };
 
 // 家教求职相关API
 export const jobPostApi = {
   create: (data) => api.post('/resources/teacher/job-post', data),
   getList: () => api.get('/resources/teacher/job-posts'),
+  getMyList: () => api.get('/resources/teacher/my-job-posts'),
   update: (data) => api.put('/resources/teacher/job-post', data),
   deactivate: (id) => api.put(`/resources/teacher/job-post/${id}/deactivate`)
 };
@@ -60,9 +65,10 @@ export const jobPostApi = {
 export const tutoringRequestApi = {
   create: (data) => api.post('/resources/tutoring-requests', data),
   getList: () => api.get('/resources/tutoring-requests'),
+  getMyList: () => api.get('/resources/my-tutoring-requests'),
   getById: (id) => api.get(`/resources/tutoring-requests/${id}`),
-  update: (id, data) => api.put(`/resources/tutoring-requests/${id}`, data),
-  delete: (id) => api.delete(`/resources/tutoring-requests/${id}`)
+  update: (data) => api.put('/resources/tutoring-request', data),
+  deactivate: (id) => api.put(`/resources/tutoring-request/${id}/deactivate`)
 };
 
 // 预约相关API
