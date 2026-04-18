@@ -88,7 +88,16 @@
                   </div>
                   <div class="budget-row">
                     <span class="budget">预算: ¥{{ request.budgetPerHour }}/小时</span>
-                    <div>
+                    <div class="action-buttons">
+                      <el-button
+                        :type="isFavorited(request.id) ? 'warning' : 'default'"
+                        size="small"
+                        :loading="favoriteLoadingIds.includes(request.id)"
+                        :disabled="favoriteLoadingIds.includes(request.id)"
+                        @click="toggleFavorite(request)"
+                      >
+                        {{ isFavorited(request.id) ? '取消收藏' : '收藏' }}
+                      </el-button>
                       <el-button type="info" size="small" @click="openDetailDialog(request)">查看详情</el-button>
                       <el-button type="primary" size="small" @click="openContactDialog(request)">联系学生</el-button>
                     </div>
@@ -147,9 +156,9 @@
               {{ selectedRequest?.createdAt || '未知' }}
             </el-descriptions-item>
           </el-descriptions>
-          
+
           <el-divider content-position="left">学生信息</el-divider>
-          
+
           <el-descriptions :column="2" border>
             <el-descriptions-item label="学生姓名">
               {{ selectedRequest?.student?.user?.name || '未填写' }}
@@ -173,7 +182,7 @@
               {{ selectedRequest?.student?.address || '未填写' }}
             </el-descriptions-item>
           </el-descriptions>
-          
+
           <template #footer>
             <el-button @click="detailDialogVisible = false">关闭</el-button>
             <el-button type="primary" @click="contactFromDetail">联系学生</el-button>
@@ -185,7 +194,7 @@
 </template>
 
 <script>
-import { tutoringRequestApi } from '../../api/api';
+import { tutoringRequestApi, favoriteApi } from '../../api/api';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
@@ -206,6 +215,8 @@ export default {
       activeIndex: '1',
       searchSubject: '',
       requestList: [],
+      favoriteIds: [],
+      favoriteLoadingIds: [],
       contactDialogVisible: false,
       detailDialogVisible: false,
       selectedRequest: null,
@@ -242,8 +253,12 @@ export default {
     },
     async loadRequests() {
       try {
-        const response = await tutoringRequestApi.getList();
-        this.requestList = response || [];
+        const [requests, favorites] = await Promise.all([
+          tutoringRequestApi.getList(),
+          favoriteApi.getList('STUDENT_TUTORING_REQUEST')
+        ]);
+        this.requestList = requests || [];
+        this.favoriteIds = (favorites || []).map(favorite => favorite.resourceId).filter(id => id != null);
       } catch (error) {
         console.error('加载学生需求信息失败:', error);
         this.$message.error('加载学生需求信息失败');
@@ -255,7 +270,6 @@ export default {
         return;
       }
       try {
-        // 注意：实际项目中建议后端支持搜索参数，这里沿用前端过滤逻辑
         const response = await tutoringRequestApi.getList();
         this.requestList = (response || []).filter(req =>
             req.subject && req.subject.toLowerCase().includes(this.searchSubject.toLowerCase())
@@ -268,6 +282,40 @@ export default {
     resetSearch() {
       this.searchSubject = '';
       this.loadRequests();
+    },
+    isFavorited(resourceId) {
+      return this.favoriteIds.includes(resourceId);
+    },
+    async toggleFavorite(request) {
+      const resourceId = request?.id;
+      if (!resourceId || this.favoriteLoadingIds.includes(resourceId)) {
+        return;
+      }
+
+      this.favoriteLoadingIds = [...this.favoriteLoadingIds, resourceId];
+
+      try {
+        if (this.isFavorited(resourceId)) {
+          await favoriteApi.remove({
+            resourceType: 'STUDENT_TUTORING_REQUEST',
+            resourceId
+          });
+          this.favoriteIds = this.favoriteIds.filter(id => id !== resourceId);
+          this.$message.success('已取消收藏');
+        } else {
+          await favoriteApi.add({
+            resourceType: 'STUDENT_TUTORING_REQUEST',
+            resourceId
+          });
+          this.favoriteIds = [...this.favoriteIds, resourceId];
+          this.$message.success('收藏成功');
+        }
+      } catch (error) {
+        console.error('收藏操作失败:', error);
+        this.$message.error('收藏操作失败');
+      } finally {
+        this.favoriteLoadingIds = this.favoriteLoadingIds.filter(id => id !== resourceId);
+      }
     },
     openContactDialog(request) {
       this.selectedRequest = request;
@@ -446,14 +494,21 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .budget {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   color: #67c23a;
 }
-
 /* 响应式调整：小屏幕下卡片占满一行 */
 @media (max-width: 768px) {
   .el-col {

@@ -49,7 +49,7 @@
             <el-button type="primary" @click="searchJobPosts">搜索</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </div>
-          
+
           <div class="job-posts-container">
             <h2>教师求职信息</h2>
             <el-row :gutter="20">
@@ -81,7 +81,18 @@
                     </div>
                     <div class="price-row">
                       <span class="price">¥{{ jobPost.pricePerHour }}/小时</span>
-                      <el-button type="primary" size="small" @click="openAppointmentDialog(jobPost)">预约</el-button>
+                      <div class="action-buttons">
+                        <el-button
+                          :type="isFavorited(jobPost.id) ? 'warning' : 'default'"
+                          size="small"
+                          :loading="favoriteLoadingIds.includes(jobPost.id)"
+                          :disabled="favoriteLoadingIds.includes(jobPost.id)"
+                          @click="toggleFavorite(jobPost)"
+                        >
+                          {{ isFavorited(jobPost.id) ? '取消收藏' : '收藏' }}
+                        </el-button>
+                        <el-button type="primary" size="small" @click="openAppointmentDialog(jobPost)">预约</el-button>
+                      </div>
                     </div>
                   </div>
                 </el-card>
@@ -90,7 +101,7 @@
             <el-empty v-if="jobPostList.length === 0" description="暂无教师求职信息"></el-empty>
           </div>
         </div>
-        
+
         <el-dialog v-model="appointmentDialogVisible" title="预约教师" width="500px">
           <el-form :model="appointmentForm" label-width="100px">
             <el-form-item label="老师姓名">
@@ -122,7 +133,7 @@
 </template>
 
 <script>
-import { jobPostApi, appointmentApi } from '../../api/api';
+import { jobPostApi, appointmentApi, favoriteApi } from '../../api/api';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
 
 export default {
@@ -143,6 +154,8 @@ export default {
       activeIndex: '1',
       searchSubject: '',
       jobPostList: [],
+      favoriteIds: [],
+      favoriteLoadingIds: [],
       appointmentDialogVisible: false,
       selectedJobPost: null,
       appointmentForm: {
@@ -179,8 +192,12 @@ export default {
     },
     async loadJobPosts() {
       try {
-        const response = await jobPostApi.getList();
-        this.jobPostList = response || [];
+        const [jobPosts, favorites] = await Promise.all([
+          jobPostApi.getList(),
+          favoriteApi.getList('TEACHER_JOB_POST')
+        ]);
+        this.jobPostList = jobPosts || [];
+        this.favoriteIds = (favorites || []).map(favorite => favorite.resourceId).filter(id => id != null);
       } catch (error) {
         console.error('加载教师求职信息失败:', error);
         this.$message.error('加载教师求职信息失败');
@@ -193,7 +210,7 @@ export default {
       }
       try {
         const response = await jobPostApi.getList();
-        this.jobPostList = (response || []).filter(post => 
+        this.jobPostList = (response || []).filter(post =>
           post.subject && post.subject.toLowerCase().includes(this.searchSubject.toLowerCase())
         );
       } catch (error) {
@@ -204,6 +221,40 @@ export default {
     resetSearch() {
       this.searchSubject = '';
       this.loadJobPosts();
+    },
+    isFavorited(resourceId) {
+      return this.favoriteIds.includes(resourceId);
+    },
+    async toggleFavorite(jobPost) {
+      const resourceId = jobPost?.id;
+      if (!resourceId || this.favoriteLoadingIds.includes(resourceId)) {
+        return;
+      }
+
+      this.favoriteLoadingIds = [...this.favoriteLoadingIds, resourceId];
+
+      try {
+        if (this.isFavorited(resourceId)) {
+          await favoriteApi.remove({
+            resourceType: 'TEACHER_JOB_POST',
+            resourceId
+          });
+          this.favoriteIds = this.favoriteIds.filter(id => id !== resourceId);
+          this.$message.success('已取消收藏');
+        } else {
+          await favoriteApi.add({
+            resourceType: 'TEACHER_JOB_POST',
+            resourceId
+          });
+          this.favoriteIds = [...this.favoriteIds, resourceId];
+          this.$message.success('收藏成功');
+        }
+      } catch (error) {
+        console.error('收藏操作失败:', error);
+        this.$message.error('收藏操作失败');
+      } finally {
+        this.favoriteLoadingIds = this.favoriteLoadingIds.filter(id => id !== resourceId);
+      }
     },
     openAppointmentDialog(jobPost) {
       this.selectedJobPost = jobPost;
@@ -370,6 +421,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .price {
