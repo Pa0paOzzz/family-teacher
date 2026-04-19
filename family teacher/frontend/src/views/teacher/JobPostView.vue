@@ -32,6 +32,10 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -53,8 +57,16 @@
             <el-form-item label="价格/小时" prop="pricePerHour">
               <el-input v-model.number="jobPostForm.pricePerHour" type="number" placeholder="请输入每小时价格"></el-input>
             </el-form-item>
-            <el-form-item label="地点" prop="location">
-              <el-input v-model="jobPostForm.location" placeholder="请输入服务地点"></el-input>
+            <el-form-item label="地点" prop="locationDistrict">
+              <LocationSelector
+                :province="jobPostForm.locationProvince"
+                :city="jobPostForm.locationCity"
+                :district="jobPostForm.locationDistrict"
+                @update="updateLocation"
+              />
+            </el-form-item>
+            <el-form-item v-if="jobPostForm.locationFormatted" label="已选地点">
+              <el-input :model-value="jobPostForm.locationFormatted" disabled></el-input>
             </el-form-item>
             <el-form-item label="可用时间" prop="availability">
               <el-input v-model="jobPostForm.availability" placeholder="请输入可用时间"></el-input>
@@ -64,13 +76,17 @@
               <el-button v-if="editingId" @click="cancelEdit">取消</el-button>
             </el-form-item>
           </el-form>
-          
+
           <h3>我的求职列表</h3>
           <el-table :data="jobPostList" style="width: 100%">
             <el-table-column prop="title" label="标题" width="200"></el-table-column>
             <el-table-column prop="subject" label="学科"></el-table-column>
             <el-table-column prop="pricePerHour" label="价格/小时"></el-table-column>
-            <el-table-column prop="location" label="地点"></el-table-column>
+            <el-table-column label="地点">
+              <template #default="scope">
+                {{ getLocationText(scope.row) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="createdAt" label="发布时间"></el-table-column>
             <el-table-column prop="active" label="状态">
               <template #default="scope">
@@ -94,7 +110,24 @@
 
 <script>
 import { jobPostApi } from '../../api/api';
-import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import LocationSelector from '../../components/LocationSelector.vue';
+import { buildLocationPayload, getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+
+function createEmptyJobPostForm() {
+  return {
+    title: '',
+    description: '',
+    subject: '',
+    pricePerHour: '',
+    location: '',
+    locationProvince: '',
+    locationCity: '',
+    locationDistrict: '',
+    locationFormatted: '',
+    availability: ''
+  };
+}
 
 export default {
   name: 'TeacherJobPostView',
@@ -104,19 +137,14 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment,
+    LocationSelector
   },
   data() {
     return {
       activeIndex: '3',
-      jobPostForm: {
-        title: '',
-        description: '',
-        subject: '',
-        pricePerHour: '',
-        location: '',
-        availability: ''
-      },
+      jobPostForm: createEmptyJobPostForm(),
       rules: {
         title: [
           { required: true, message: '请输入求职标题', trigger: 'blur' }
@@ -130,8 +158,8 @@ export default {
         pricePerHour: [
           { required: true, message: '请输入每小时价格', trigger: 'blur' }
         ],
-        location: [
-          { required: true, message: '请输入服务地点', trigger: 'blur' }
+        locationDistrict: [
+          { required: true, message: '请选择区', trigger: 'change' }
         ],
         availability: [
           { required: true, message: '请输入可用时间', trigger: 'blur' }
@@ -163,9 +191,24 @@ export default {
           this.$router.push('/teacher/favorites');
           break;
         case '6':
+          this.$router.push('/teacher/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
+    },
+    updateLocation(location) {
+      Object.assign(this.jobPostForm, {
+        location: location.formatted,
+        locationProvince: location.province,
+        locationCity: location.city,
+        locationDistrict: location.district,
+        locationFormatted: location.formatted
+      });
+    },
+    getLocationText(item) {
+      return getDisplayLocation(item, 'location');
     },
     async getJobPostList() {
       try {
@@ -180,17 +223,27 @@ export default {
       this.$refs.jobPostFormRef.validate(async (valid) => {
         if (valid) {
           try {
+            const payload = {
+              title: this.jobPostForm.title,
+              description: this.jobPostForm.description,
+              subject: this.jobPostForm.subject,
+              pricePerHour: this.jobPostForm.pricePerHour,
+              availability: this.jobPostForm.availability,
+              ...buildLocationPayload('location', this.jobPostForm)
+            };
+
             if (this.editingId) {
               await jobPostApi.update({
                 id: this.editingId,
-                ...this.jobPostForm
+                ...payload
               });
               this.$message.success('更新成功');
               this.editingId = null;
             } else {
-              await jobPostApi.create(this.jobPostForm);
+              await jobPostApi.create(payload);
               this.$message.success('发布成功');
             }
+            this.jobPostForm = createEmptyJobPostForm();
             this.$refs.jobPostFormRef.resetFields();
             this.getJobPostList();
           } catch (error) {
@@ -206,16 +259,18 @@ export default {
     editJobPost(jobPost) {
       this.editingId = jobPost.id;
       this.jobPostForm = {
+        ...createEmptyJobPostForm(),
         title: jobPost.title,
         description: jobPost.description,
         subject: jobPost.subject,
         pricePerHour: jobPost.pricePerHour,
-        location: jobPost.location,
-        availability: jobPost.availability
+        availability: jobPost.availability,
+        ...normalizeLocationFields('location', jobPost)
       };
     },
     cancelEdit() {
       this.editingId = null;
+      this.jobPostForm = createEmptyJobPostForm();
       this.$refs.jobPostFormRef.resetFields();
     },
     async closeJobPost(id) {

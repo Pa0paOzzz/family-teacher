@@ -161,17 +161,21 @@ public class AppointmentController {
             if (appointment.getTeacher() != null && appointment.getTeacher().getUser() != null) {
                 item.put("teacherName", appointment.getTeacher().getUser().getName());
                 item.put("teacherId", appointment.getTeacher().getId());
+                item.put("teacherUserId", appointment.getTeacher().getUser().getId());
             } else {
                 item.put("teacherName", "未知");
                 item.put("teacherId", 0);
+                item.put("teacherUserId", 0);
             }
             
             if (appointment.getStudent() != null && appointment.getStudent().getUser() != null) {
                 item.put("studentName", appointment.getStudent().getUser().getName());
                 item.put("studentId", appointment.getStudent().getId());
+                item.put("studentUserId", appointment.getStudent().getUser().getId());
             } else {
                 item.put("studentName", "未知");
                 item.put("studentId", 0);
+                item.put("studentUserId", 0);
             }
             
             result.add(item);
@@ -223,17 +227,21 @@ public class AppointmentController {
         if (appointment.getTeacher() != null && appointment.getTeacher().getUser() != null) {
             result.put("teacherName", appointment.getTeacher().getUser().getName());
             result.put("teacherId", appointment.getTeacher().getId());
+            result.put("teacherUserId", appointment.getTeacher().getUser().getId());
         } else {
             result.put("teacherName", "未知");
             result.put("teacherId", 0);
+            result.put("teacherUserId", 0);
         }
         
         if (appointment.getStudent() != null && appointment.getStudent().getUser() != null) {
             result.put("studentName", appointment.getStudent().getUser().getName());
             result.put("studentId", appointment.getStudent().getId());
+            result.put("studentUserId", appointment.getStudent().getUser().getId());
         } else {
             result.put("studentName", "未知");
             result.put("studentId", 0);
+            result.put("studentUserId", 0);
         }
         
         return result;

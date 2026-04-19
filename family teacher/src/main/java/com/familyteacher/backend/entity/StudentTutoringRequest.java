@@ -21,6 +21,12 @@ public class StudentTutoringRequest {
     private String subject;
     private Double budgetPerHour;
     private String location;
+    private String locationProvince;
+    private String locationCity;
+    private String locationDistrict;
+    private String locationFormatted;
+    private Double locationLongitude;
+    private Double locationLatitude;
     private String preferredTime;
     private Date createdAt;
     private Date updatedAt;

@@ -32,6 +32,10 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -53,8 +57,16 @@
             <el-form-item label="预算/小时" prop="budgetPerHour">
               <el-input v-model.number="requestForm.budgetPerHour" type="number" placeholder="请输入每小时预算"></el-input>
             </el-form-item>
-            <el-form-item label="地点" prop="location">
-              <el-input v-model="requestForm.location" placeholder="请输入家教地点"></el-input>
+            <el-form-item label="地点" prop="locationDistrict">
+              <LocationSelector
+                :province="requestForm.locationProvince"
+                :city="requestForm.locationCity"
+                :district="requestForm.locationDistrict"
+                @update="updateLocation"
+              />
+            </el-form-item>
+            <el-form-item v-if="requestForm.locationFormatted" label="已选地点">
+              <el-input :model-value="requestForm.locationFormatted" disabled></el-input>
             </el-form-item>
             <el-form-item label="期望时间" prop="preferredTime">
               <el-input v-model="requestForm.preferredTime" placeholder="请输入期望时间"></el-input>
@@ -64,13 +76,17 @@
               <el-button v-if="editingId" @click="cancelEdit">取消</el-button>
             </el-form-item>
           </el-form>
-          
+
           <h3>我的需求列表</h3>
           <el-table :data="requestList" style="width: 100%">
             <el-table-column prop="title" label="标题" width="200"></el-table-column>
             <el-table-column prop="subject" label="学科"></el-table-column>
             <el-table-column prop="budgetPerHour" label="预算/小时"></el-table-column>
-            <el-table-column prop="location" label="地点"></el-table-column>
+            <el-table-column label="地点">
+              <template #default="scope">
+                {{ getLocationText(scope.row) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="createdAt" label="发布时间"></el-table-column>
             <el-table-column prop="active" label="状态">
               <template #default="scope">
@@ -94,7 +110,24 @@
 
 <script>
 import { tutoringRequestApi } from '../../api/api';
-import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import LocationSelector from '../../components/LocationSelector.vue';
+import { buildLocationPayload, getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+
+function createEmptyRequestForm() {
+  return {
+    title: '',
+    description: '',
+    subject: '',
+    budgetPerHour: '',
+    location: '',
+    locationProvince: '',
+    locationCity: '',
+    locationDistrict: '',
+    locationFormatted: '',
+    preferredTime: ''
+  };
+}
 
 export default {
   name: 'StudentTutoringRequestView',
@@ -104,19 +137,14 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment,
+    LocationSelector
   },
   data() {
     return {
       activeIndex: '3',
-      requestForm: {
-        title: '',
-        description: '',
-        subject: '',
-        budgetPerHour: '',
-        location: '',
-        preferredTime: ''
-      },
+      requestForm: createEmptyRequestForm(),
       rules: {
         title: [
           { required: true, message: '请输入需求标题', trigger: 'blur' }
@@ -130,8 +158,8 @@ export default {
         budgetPerHour: [
           { required: true, message: '请输入每小时预算', trigger: 'blur' }
         ],
-        location: [
-          { required: true, message: '请输入家教地点', trigger: 'blur' }
+        locationDistrict: [
+          { required: true, message: '请选择区', trigger: 'change' }
         ],
         preferredTime: [
           { required: true, message: '请输入期望时间', trigger: 'blur' }
@@ -163,9 +191,24 @@ export default {
           this.$router.push('/student/favorites');
           break;
         case '6':
+          this.$router.push('/student/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
+    },
+    updateLocation(location) {
+      Object.assign(this.requestForm, {
+        location: location.formatted,
+        locationProvince: location.province,
+        locationCity: location.city,
+        locationDistrict: location.district,
+        locationFormatted: location.formatted
+      });
+    },
+    getLocationText(item) {
+      return getDisplayLocation(item, 'location');
     },
     async getRequestList() {
       try {
@@ -180,17 +223,27 @@ export default {
       this.$refs.requestFormRef.validate(async (valid) => {
         if (valid) {
           try {
+            const payload = {
+              title: this.requestForm.title,
+              description: this.requestForm.description,
+              subject: this.requestForm.subject,
+              budgetPerHour: this.requestForm.budgetPerHour,
+              preferredTime: this.requestForm.preferredTime,
+              ...buildLocationPayload('location', this.requestForm)
+            };
+
             if (this.editingId) {
               await tutoringRequestApi.update({
                 id: this.editingId,
-                ...this.requestForm
+                ...payload
               });
               this.$message.success('更新成功');
               this.editingId = null;
             } else {
-              await tutoringRequestApi.create(this.requestForm);
+              await tutoringRequestApi.create(payload);
               this.$message.success('发布成功');
             }
+            this.requestForm = createEmptyRequestForm();
             this.$refs.requestFormRef.resetFields();
             this.getRequestList();
           } catch (error) {
@@ -206,16 +259,18 @@ export default {
     editRequest(request) {
       this.editingId = request.id;
       this.requestForm = {
+        ...createEmptyRequestForm(),
         title: request.title,
         description: request.description,
         subject: request.subject,
         budgetPerHour: request.budgetPerHour,
-        location: request.location,
-        preferredTime: request.preferredTime
+        preferredTime: request.preferredTime,
+        ...normalizeLocationFields('location', request)
       };
     },
     cancelEdit() {
       this.editingId = null;
+      this.requestForm = createEmptyRequestForm();
       this.$refs.requestFormRef.resetFields();
     },
     async closeRequest(id) {

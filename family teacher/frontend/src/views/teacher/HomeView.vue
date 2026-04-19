@@ -1,9 +1,7 @@
 <template>
   <div class="teacher-home">
-    <!-- 设置容器高度为 100vh，启用 Flex 布局 -->
     <el-container style="height: 100vh;">
 
-      <!-- 侧边栏：不再需要 position: fixed，由 el-container 自动排列 -->
       <el-aside width="200px" class="sidebar">
         <div class="logo">
           <h2>家教平台</h2>
@@ -38,13 +36,16 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
 
-      <!-- 主内容区：自动占满剩余宽度，无需 margin-left -->
       <el-main class="main-content">
         <div class="search-container">
           <el-input
@@ -80,7 +81,7 @@
                   </div>
                   <div class="info-row">
                     <el-icon><Location /></el-icon>
-                    <span>{{ request.location }}</span>
+                    <span>{{ getLocationText(request) }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><Clock /></el-icon>
@@ -144,7 +145,7 @@
               ¥{{ selectedRequest?.budgetPerHour || 0 }}
             </el-descriptions-item>
             <el-descriptions-item label="地点" :span="2">
-              {{ selectedRequest?.location || '未填写' }}
+              {{ getLocationText(selectedRequest) || '未填写' }}
             </el-descriptions-item>
             <el-descriptions-item label="期望时间" :span="2">
               {{ selectedRequest?.preferredTime || '未填写' }}
@@ -179,7 +180,7 @@
               {{ selectedRequest?.student?.user?.email || '未填写' }}
             </el-descriptions-item>
             <el-descriptions-item label="地址" :span="2">
-              {{ selectedRequest?.student?.address || '未填写' }}
+              {{ getAddressText(selectedRequest?.student) || '未填写' }}
             </el-descriptions-item>
           </el-descriptions>
 
@@ -195,7 +196,8 @@
 
 <script>
 import { tutoringRequestApi, favoriteApi } from '../../api/api';
-import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import { getDisplayLocation } from '../../utils/location';
+import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
 export default {
   name: 'TeacherHomeView',
@@ -208,7 +210,8 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment
   },
   data() {
     return {
@@ -247,9 +250,18 @@ export default {
           this.$router.push('/teacher/favorites');
           break;
         case '6':
+          this.$router.push('/teacher/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
+    },
+    getLocationText(item) {
+      return getDisplayLocation(item, 'location');
+    },
+    getAddressText(item) {
+      return getDisplayLocation(item, 'address');
     },
     async loadRequests() {
       try {
@@ -340,28 +352,25 @@ export default {
 </script>
 
 <style scoped>
-/* 最外层容器占满视口高度，防止出现双重滚动条 */
 .teacher-home {
   height: 100vh;
   overflow: hidden;
   background-color: #f5f7fa;
 }
 
-/* 侧边栏样式：移除 fixed 定位，让它自然参与 Flex 布局 */
 .sidebar {
   height: 100%;
   background-color: #304156;
   color: white;
   display: flex;
   flex-direction: column;
-  /* 不再需要 z-index, left, top 等 */
 }
 
 .logo {
   padding: 20px;
   text-align: center;
   border-bottom: 1px solid #3a4a5b;
-  flex-shrink: 0; /* 防止 logo 区域被压缩 */
+  flex-shrink: 0;
 }
 
 .logo h2 {
@@ -378,77 +387,55 @@ export default {
 
 .sidebar-menu {
   border: none;
-  background-color: #304156;
-  flex: 1; /* 菜单占据剩余垂直空间 */
-  overflow-y: auto; /* 如果菜单项过多，允许侧边栏内部滚动 */
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
+.sidebar-menu :deep(.el-menu-item.is-active) {
   color: #409EFF;
   background-color: #263445;
 }
 
-/* 主内容区样式 */
-.el-main {
-  padding: 0; /* 移除默认 padding，由内部容器控制 */
-  background-color: #f5f7fa;
-  height: 100%;
-  overflow-y: auto; /* 只有主内容区滚动 */
-  display: flex;
-  flex-direction: column;
-}
-
-/* 内部包装器，用于控制实际内容的 padding 和布局 */
-.main-content-wrapper {
+.main-content {
   padding: 20px;
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  margin-left: 0;
 }
 
 .search-container {
-  margin: 20px 20px 0 20px; /* 上右下左 */
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  flex-shrink: 0;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
 }
 
 .requests-container {
-  margin: 20px;
-  padding: 20px;
   background-color: white;
+  padding: 30px;
   border-radius: 8px;
-  flex: 1; /* 占据剩余垂直空间 */
-  overflow-y: auto; /* 内容过多时在此区域滚动，或者依赖父级 .el-main 滚动 */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 如果希望整个页面一起滚动而不是局部滚动，可以将 .requests-container 的 overflow 改为 visible */
-/* 但通常后台管理系统推荐局部滚动以保持头部搜索可见，或者像下面这样让 el-main 统一滚动 */
-
-/* 修正：为了让搜索框和内容作为一个整体在 el-main 中滚动，我们调整一下结构逻辑 */
-/* 上面的 .search-container 和 .requests-container 都在 el-main 内，el-main 设置了 overflow-y: auto */
-/* 所以不需要给 .requests-container 单独设置 overflow，除非你想让搜索框固定 */
-
-/* 下面的样式是针对当前模板结构的优化 */
 .requests-container h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .request-card {
   margin-bottom: 20px;
-  height: 100%; /* 让卡片在列中撑开 */
+  transition: all 0.3s;
+}
+
+.request-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
@@ -458,26 +445,26 @@ export default {
 }
 
 .card-header .title {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: #303133;
+}
+
+.card-content {
+  font-size: 14px;
 }
 
 .card-content .description {
   color: #606266;
-  font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   margin-bottom: 15px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  min-height: 45px;
 }
 
 .info-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: #606266;
   font-size: 14px;
 }
@@ -488,33 +475,22 @@ export default {
 }
 
 .budget-row {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #ebeef5;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ebeef5;
+}
+
+.budget-row .budget {
+  font-size: 20px;
+  font-weight: bold;
+  color: #409EFF;
 }
 
 .action-buttons {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.budget {
-  font-size: 18px;
-  font-weight: bold;
-  color: #67c23a;
-}
-/* 响应式调整：小屏幕下卡片占满一行 */
-@media (max-width: 768px) {
-  .el-col {
-    width: 100%;
-    flex: 100%;
-    max-width: 100%;
-  }
+  gap: 10px;
 }
 </style>

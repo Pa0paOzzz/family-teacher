@@ -23,6 +23,12 @@ public class Teacher {
     private String bio;
     private Double pricePerHour;
     private String address;
+    private String addressProvince;
+    private String addressCity;
+    private String addressDistrict;
+    private String addressFormatted;
+    private Double addressLongitude;
+    private Double addressLatitude;
     private Integer rating;
     private Integer reviewCount;
 }

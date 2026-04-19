@@ -32,6 +32,10 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -98,6 +102,7 @@
                 <el-table-column label="操作">
                   <template #default="scope">
                     <el-button type="info" size="small" @click="openDetailDialog(scope.row)">查看详情</el-button>
+                    <el-button type="warning" size="small" @click="openEvaluateDialog(scope.row)" :disabled="scope.row.hasEvaluated">{{ scope.row.hasEvaluated ? '已评价' : '评价' }}</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -155,14 +160,41 @@
             <el-button @click="detailDialogVisible = false">关闭</el-button>
           </template>
         </el-dialog>
+        
+        <el-dialog v-model="evaluateDialogVisible" title="评价老师" width="500px">
+          <el-form :model="evaluateForm" label-width="100px">
+            <el-form-item label="家教老师">
+              <el-input :value="selectedAppointment?.teacherName" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="学科">
+              <el-input :value="selectedAppointment?.subject" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="教学质量">
+              <el-rate v-model="evaluateForm.teachingQuality" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+            </el-form-item>
+            <el-form-item label="服务态度">
+              <el-rate v-model="evaluateForm.attitude" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+            </el-form-item>
+            <el-form-item label="满意度">
+              <el-rate v-model="evaluateForm.satisfaction" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+            </el-form-item>
+            <el-form-item label="评价内容">
+              <el-input v-model="evaluateForm.comment" type="textarea" rows="4" placeholder="请输入您的评价"></el-input>
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="evaluateDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitEvaluation">提交评价</el-button>
+          </template>
+        </el-dialog>
       </el-main>
     </el-container>
   </div>
 </template>
 
 <script>
-import { appointmentApi } from '../../api/api';
-import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import { appointmentApi, evaluationApi } from '../../api/api';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
 export default {
   name: 'StudentAppointmentsView',
@@ -172,7 +204,8 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment
   },
   data() {
     return {
@@ -183,6 +216,13 @@ export default {
       rejectedAppointments: [],
       detailDialogVisible: false,
       selectedAppointment: null,
+      evaluateDialogVisible: false,
+      evaluateForm: {
+        teachingQuality: 0,
+        attitude: 0,
+        satisfaction: 0,
+        comment: ''
+      },
       refreshInterval: null
     }
   },
@@ -212,6 +252,9 @@ export default {
           this.$router.push('/student/favorites');
           break;
         case '6':
+          this.$router.push('/student/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
@@ -219,10 +262,23 @@ export default {
     async loadAppointments() {
       try {
         const response = await appointmentApi.getList();
-        this.pendingAppointments = (response || []).filter(app => app.status === 'PENDING');
-        this.acceptedAppointments = (response || []).filter(app => app.status === 'ACCEPTED');
-        this.completedAppointments = (response || []).filter(app => app.status === 'COMPLETED');
-        this.rejectedAppointments = (response || []).filter(app => app.status === 'REJECTED');
+        const appointments = response || [];
+        for (const app of appointments) {
+          if (app.status === 'COMPLETED') {
+            try {
+              const checkResult = await evaluationApi.check(app.id);
+              app.hasEvaluated = checkResult.hasEvaluated;
+            } catch {
+              app.hasEvaluated = false;
+            }
+          } else {
+            app.hasEvaluated = false;
+          }
+        }
+        this.pendingAppointments = appointments.filter(app => app.status === 'PENDING');
+        this.acceptedAppointments = appointments.filter(app => app.status === 'ACCEPTED');
+        this.completedAppointments = appointments.filter(app => app.status === 'COMPLETED');
+        this.rejectedAppointments = appointments.filter(app => app.status === 'REJECTED');
       } catch (error) {
         console.error('加载预约列表失败:', error);
         this.$message.error('加载预约列表失败');
@@ -241,6 +297,42 @@ export default {
     openDetailDialog(appointment) {
       this.selectedAppointment = appointment;
       this.detailDialogVisible = true;
+    },
+    openEvaluateDialog(appointment) {
+      this.selectedAppointment = appointment;
+      this.evaluateForm = {
+        teachingQuality: 0,
+        attitude: 0,
+        satisfaction: 0,
+        comment: ''
+      };
+      this.evaluateDialogVisible = true;
+    },
+    async submitEvaluation() {
+      if (this.evaluateForm.teachingQuality === 0 || this.evaluateForm.attitude === 0 || this.evaluateForm.satisfaction === 0) {
+        this.$message.warning('请完成所有打分项');
+        return;
+      }
+      try {
+        const response = await evaluationApi.create({
+          appointmentId: this.selectedAppointment.id,
+          evaluatedId: this.selectedAppointment.teacherUserId,
+          teachingQuality: this.evaluateForm.teachingQuality,
+          attitude: this.evaluateForm.attitude,
+          satisfaction: this.evaluateForm.satisfaction,
+          comment: this.evaluateForm.comment
+        });
+        if (response.success) {
+          this.$message.success('评价提交成功');
+          this.evaluateDialogVisible = false;
+          this.loadAppointments();
+        } else {
+          this.$message.error(response.error || '提交评价失败');
+        }
+      } catch (error) {
+        console.error('提交评价失败:', error);
+        this.$message.error('提交评价失败: ' + (error.response?.data?.error || error.message));
+      }
     },
     getStatusType(status) {
       switch(status) {

@@ -41,7 +41,7 @@ public class EvaluationService {
     
     // 更新家教的评分
     private void updateTeacherRating(User user) {
-        if (user.getRole().equals("TEACHER")) {
+        if (user != null && "TEACHER".equals(user.getRole())) {
             List<Evaluation> evaluations = evaluationRepository.findByEvaluated(user);
             if (!evaluations.isEmpty()) {
                 int totalScore = 0;

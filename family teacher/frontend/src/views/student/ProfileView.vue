@@ -32,6 +32,10 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -62,8 +66,16 @@
             <el-form-item label="专业" prop="major">
               <el-input v-model="studentForm.major"></el-input>
             </el-form-item>
-            <el-form-item label="地址" prop="address">
-              <el-input v-model="studentForm.address"></el-input>
+            <el-form-item label="地址" prop="addressDistrict">
+              <LocationSelector
+                :province="studentForm.addressProvince"
+                :city="studentForm.addressCity"
+                :district="studentForm.addressDistrict"
+                @update="updateAddress"
+              />
+            </el-form-item>
+            <el-form-item v-if="studentForm.addressFormatted" label="已选地址">
+              <el-input :model-value="studentForm.addressFormatted" disabled></el-input>
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveProfile">保存修改</el-button>
@@ -77,7 +89,26 @@
 
 <script>
 import { userApi } from '../../api/api';
-import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import LocationSelector from '../../components/LocationSelector.vue';
+import { buildLocationPayload, normalizeLocationFields } from '../../utils/location';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+
+function createEmptyStudentForm() {
+  return {
+    username: '',
+    name: '',
+    email: '',
+    phone: '',
+    school: '',
+    grade: '',
+    major: '',
+    address: '',
+    addressProvince: '',
+    addressCity: '',
+    addressDistrict: '',
+    addressFormatted: ''
+  };
+}
 
 export default {
   name: 'StudentProfileView',
@@ -87,21 +118,14 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment,
+    LocationSelector
   },
   data() {
     return {
       activeIndex: '2',
-      studentForm: {
-        username: '',
-        name: '',
-        email: '',
-        phone: '',
-        school: '',
-        grade: '',
-        major: '',
-        address: ''
-      },
+      studentForm: createEmptyStudentForm(),
       rules: {
         name: [
           { required: true, message: '请输入姓名', trigger: 'blur' }
@@ -122,8 +146,8 @@ export default {
         major: [
           { required: true, message: '请输入专业', trigger: 'blur' }
         ],
-        address: [
-          { required: true, message: '请输入地址', trigger: 'blur' }
+        addressDistrict: [
+          { required: true, message: '请选择区', trigger: 'change' }
         ]
       }
     }
@@ -150,14 +174,27 @@ export default {
           this.$router.push('/student/favorites');
           break;
         case '6':
+          this.$router.push('/student/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
+    },
+    updateAddress(location) {
+      Object.assign(this.studentForm, {
+        address: location.formatted,
+        addressProvince: location.province,
+        addressCity: location.city,
+        addressDistrict: location.district,
+        addressFormatted: location.formatted
+      });
     },
     async loadProfile() {
       try {
         const response = await userApi.getStudentProfile();
         this.studentForm = {
+          ...createEmptyStudentForm(),
           username: response.username || '',
           name: response.name || '',
           email: response.email || '',
@@ -165,7 +202,7 @@ export default {
           school: response.school || '',
           grade: response.grade || '',
           major: response.major || '',
-          address: response.address || ''
+          ...normalizeLocationFields('address', response)
         };
       } catch (error) {
         console.error('加载个人资料失败:', error);
@@ -176,7 +213,16 @@ export default {
       this.$refs.studentFormRef.validate(async (valid) => {
         if (valid) {
           try {
-            await userApi.updateStudentProfile(this.studentForm);
+            await userApi.updateStudentProfile({
+              username: this.studentForm.username,
+              name: this.studentForm.name,
+              email: this.studentForm.email,
+              phone: this.studentForm.phone,
+              school: this.studentForm.school,
+              grade: this.studentForm.grade,
+              major: this.studentForm.major,
+              ...buildLocationPayload('address', this.studentForm)
+            });
             this.$message.success('保存成功');
             this.loadProfile();
           } catch (error) {
@@ -264,32 +310,5 @@ export default {
   background-color: white;
   border-radius: 8px;
   min-height: calc(100vh - 40px);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.el-form {
-  width: 100%;
-}
-
-.el-form-item {
-  margin-bottom: 20px;
-}
-
-.el-form-item__content {
-  flex: 1;
-}
-
-.el-input {
-  width: 100%;
-}
-
-.profile-container h2 {
-  margin-bottom: 30px;
-  color: #409EFF;
-}
-
-.el-form-item {
-  margin-bottom: 20px;
 }
 </style>

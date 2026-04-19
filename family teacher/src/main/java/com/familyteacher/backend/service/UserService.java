@@ -1,47 +1,49 @@
 package com.familyteacher.backend.service;
 
-import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.entity.Student;
 import com.familyteacher.backend.entity.Teacher;
+import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.repository.UserRepository;
 import com.familyteacher.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Optional;
-import java.util.Map;
+import org.springframework.util.StringUtils;
+
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class UserService {
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private JwtUtil jwtUtil;
-    
+
     @Autowired
     private StudentService studentService;
-    
+
     @Autowired
     private TeacherService teacherService;
-    
+
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    
+
     public User register(User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
-    
+
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
-    
+
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
-    
+
     public String login(String username, String password) {
         Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isPresent()) {
@@ -52,15 +54,19 @@ public class UserService {
         }
         return null;
     }
-    
+
     public User updateUser(User user) {
         return userRepository.save(user);
     }
-    
+
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }
     
+    public User getUserById(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     public User getUserFromToken(String token) {
         if (token == null) {
             return null;
@@ -68,7 +74,7 @@ public class UserService {
         String username = jwtUtil.getUsernameFromToken(token);
         return userRepository.findByUsername(username).orElse(null);
     }
-    
+
     public Map<String, Object> getUserProfile(User user) {
         Map<String, Object> response = new HashMap<>();
         response.put("id", user.getId());
@@ -77,7 +83,7 @@ public class UserService {
         response.put("phone", user.getPhone());
         response.put("name", user.getName());
         response.put("role", user.getRole());
-        
+
         if ("STUDENT".equals(user.getRole())) {
             Optional<Student> studentOptional = studentService.findByUser(user);
             if (studentOptional.isPresent()) {
@@ -86,7 +92,7 @@ public class UserService {
                 response.put("school", student.getSchool());
                 response.put("grade", student.getGrade());
                 response.put("major", student.getMajor());
-                response.put("address", student.getAddress());
+                putAddressFields(response, student);
             }
         } else if ("TEACHER".equals(user.getRole())) {
             Optional<Teacher> teacherOptional = teacherService.findByUser(user);
@@ -100,21 +106,21 @@ public class UserService {
                 response.put("subject", teacher.getSubject());
                 response.put("bio", teacher.getBio());
                 response.put("pricePerHour", teacher.getPricePerHour());
-                response.put("address", teacher.getAddress());
                 response.put("rating", teacher.getRating());
                 response.put("reviewCount", teacher.getReviewCount());
+                putAddressFields(response, teacher);
             }
         }
-        
+
         return response;
     }
-    
+
     public Map<String, Object> getStudentProfile(User user) {
         Optional<Student> studentOptional = studentService.findByUser(user);
         if (studentOptional.isEmpty()) {
             return null;
         }
-        
+
         Student student = studentOptional.get();
         Map<String, Object> response = new HashMap<>();
         response.put("id", student.getId());
@@ -126,17 +132,17 @@ public class UserService {
         response.put("school", student.getSchool());
         response.put("grade", student.getGrade());
         response.put("major", student.getMajor());
-        response.put("address", student.getAddress());
-        
+        putAddressFields(response, student);
+
         return response;
     }
-    
+
     public Map<String, Object> getTeacherProfile(User user) {
         Optional<Teacher> teacherOptional = teacherService.findByUser(user);
         if (teacherOptional.isEmpty()) {
             return null;
         }
-        
+
         Teacher teacher = teacherOptional.get();
         Map<String, Object> response = new HashMap<>();
         response.put("id", teacher.getId());
@@ -152,13 +158,13 @@ public class UserService {
         response.put("subject", teacher.getSubject());
         response.put("bio", teacher.getBio());
         response.put("pricePerHour", teacher.getPricePerHour());
-        response.put("address", teacher.getAddress());
         response.put("rating", teacher.getRating());
         response.put("reviewCount", teacher.getReviewCount());
-        
+        putAddressFields(response, teacher);
+
         return response;
     }
-    
+
     @Transactional
     public Map<String, Object> updateStudentProfile(User user, Map<String, Object> profileData) {
         if (profileData.containsKey("name")) {
@@ -171,7 +177,7 @@ public class UserService {
             user.setPhone((String) profileData.get("phone"));
         }
         updateUser(user);
-        
+
         Optional<Student> studentOptional = studentService.findByUser(user);
         Student student;
         if (studentOptional.isPresent()) {
@@ -180,7 +186,7 @@ public class UserService {
             student = new Student();
             student.setUser(user);
         }
-        
+
         if (profileData.containsKey("school")) {
             student.setSchool((String) profileData.get("school"));
         }
@@ -190,18 +196,16 @@ public class UserService {
         if (profileData.containsKey("major")) {
             student.setMajor((String) profileData.get("major"));
         }
-        if (profileData.containsKey("address")) {
-            student.setAddress((String) profileData.get("address"));
-        }
-        
+        applyStudentAddress(student, profileData);
+
         studentService.updateStudent(student);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Profile updated successfully");
         return response;
     }
-    
+
     @Transactional
     public Map<String, Object> updateTeacherProfile(User user, Map<String, Object> profileData) {
         if (profileData.containsKey("name")) {
@@ -214,7 +218,7 @@ public class UserService {
             user.setPhone((String) profileData.get("phone"));
         }
         updateUser(user);
-        
+
         Optional<Teacher> teacherOptional = teacherService.findByUser(user);
         Teacher teacher;
         if (teacherOptional.isPresent()) {
@@ -223,7 +227,7 @@ public class UserService {
             teacher = new Teacher();
             teacher.setUser(user);
         }
-        
+
         if (profileData.containsKey("school")) {
             teacher.setSchool((String) profileData.get("school"));
         }
@@ -248,15 +252,74 @@ public class UserService {
                 teacher.setPricePerHour(((Number) priceObj).doubleValue());
             }
         }
-        if (profileData.containsKey("address")) {
-            teacher.setAddress((String) profileData.get("address"));
-        }
-        
+        applyTeacherAddress(teacher, profileData);
+
         teacherService.updateTeacher(teacher);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Profile updated successfully");
         return response;
+    }
+
+    private void applyStudentAddress(Student student, Map<String, Object> profileData) {
+        if (!hasAddressPayload(profileData)) {
+            return;
+        }
+
+        String formatted = getString(profileData, "addressFormatted");
+        String rawAddress = getString(profileData, "address");
+        student.setAddress(StringUtils.hasText(formatted) ? formatted : rawAddress);
+        student.setAddressProvince(getString(profileData, "addressProvince"));
+        student.setAddressCity(getString(profileData, "addressCity"));
+        student.setAddressDistrict(getString(profileData, "addressDistrict"));
+        student.setAddressFormatted(formatted);
+        student.setAddressLongitude(null);
+        student.setAddressLatitude(null);
+    }
+
+    private void applyTeacherAddress(Teacher teacher, Map<String, Object> profileData) {
+        if (!hasAddressPayload(profileData)) {
+            return;
+        }
+
+        String formatted = getString(profileData, "addressFormatted");
+        String rawAddress = getString(profileData, "address");
+        teacher.setAddress(StringUtils.hasText(formatted) ? formatted : rawAddress);
+        teacher.setAddressProvince(getString(profileData, "addressProvince"));
+        teacher.setAddressCity(getString(profileData, "addressCity"));
+        teacher.setAddressDistrict(getString(profileData, "addressDistrict"));
+        teacher.setAddressFormatted(formatted);
+        teacher.setAddressLongitude(null);
+        teacher.setAddressLatitude(null);
+    }
+
+    private boolean hasAddressPayload(Map<String, Object> profileData) {
+        return profileData.containsKey("address")
+                || profileData.containsKey("addressProvince")
+                || profileData.containsKey("addressCity")
+                || profileData.containsKey("addressDistrict")
+                || profileData.containsKey("addressFormatted");
+    }
+
+    private void putAddressFields(Map<String, Object> response, Student student) {
+        response.put("address", student.getAddress());
+        response.put("addressProvince", student.getAddressProvince());
+        response.put("addressCity", student.getAddressCity());
+        response.put("addressDistrict", student.getAddressDistrict());
+        response.put("addressFormatted", student.getAddressFormatted());
+    }
+
+    private void putAddressFields(Map<String, Object> response, Teacher teacher) {
+        response.put("address", teacher.getAddress());
+        response.put("addressProvince", teacher.getAddressProvince());
+        response.put("addressCity", teacher.getAddressCity());
+        response.put("addressDistrict", teacher.getAddressDistrict());
+        response.put("addressFormatted", teacher.getAddressFormatted());
+    }
+
+    private String getString(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        return value == null ? null : String.valueOf(value);
     }
 }

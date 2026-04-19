@@ -19,4 +19,10 @@ public class Student {
     private String grade;
     private String major;
     private String address;
+    private String addressProvince;
+    private String addressCity;
+    private String addressDistrict;
+    private String addressFormatted;
+    private Double addressLongitude;
+    private Double addressLatitude;
 }

@@ -88,9 +88,10 @@ export const orderApi = {
 
 // 评价相关API
 export const evaluationApi = {
-  create: (data) => api.post('/evaluations', data),
-  getList: () => api.get('/evaluations'),
-  getById: (id) => api.get(`/evaluations/${id}`)
+  create: (data) => api.post('/evaluations/create', data),
+  myEvaluations: () => api.get('/evaluations/my-evaluations'),
+  receivedEvaluations: () => api.get('/evaluations/received-evaluations'),
+  check: (appointmentId) => api.get('/evaluations/check', { params: { appointmentId } })
 };
 
 // 推荐相关API

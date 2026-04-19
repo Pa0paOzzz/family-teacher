@@ -32,6 +32,10 @@
             <span>我的收藏</span>
           </el-menu-item>
           <el-menu-item index="6">
+            <el-icon><Comment /></el-icon>
+            <span>我的评价</span>
+          </el-menu-item>
+          <el-menu-item index="7">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -73,7 +77,7 @@
                     </div>
                     <div class="info-row">
                       <el-icon><Location /></el-icon>
-                      <span>{{ jobPost.location }}</span>
+                      <span>{{ getLocationText(jobPost) }}</span>
                     </div>
                     <div class="info-row">
                       <el-icon><Clock /></el-icon>
@@ -134,7 +138,8 @@
 
 <script>
 import { jobPostApi, appointmentApi, favoriteApi } from '../../api/api';
-import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton } from '@element-plus/icons-vue';
+import { getDisplayLocation } from '../../utils/location';
+import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
 export default {
   name: 'StudentHomeView',
@@ -147,7 +152,8 @@ export default {
     EditPen,
     Calendar,
     Star,
-    SwitchButton
+    SwitchButton,
+    Comment
   },
   data() {
     return {
@@ -186,9 +192,15 @@ export default {
           this.$router.push('/student/favorites');
           break;
         case '6':
+          this.$router.push('/student/evaluations');
+          break;
+        case '7':
           this.logout();
           break;
       }
+    },
+    getLocationText(item) {
+      return getDisplayLocation(item, 'location');
     },
     async loadJobPosts() {
       try {
@@ -339,44 +351,52 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
+.sidebar-menu :deep(.el-menu-item.is-active) {
   color: #409EFF;
   background-color: #263445;
 }
 
 .main-content {
-  min-height: calc(100vh - 40px);
+  padding: 20px;
 }
 
 .search-container {
-  margin-bottom: 20px;
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
 }
 
 .job-posts-container {
-  padding: 20px;
   background-color: white;
+  padding: 30px;
   border-radius: 8px;
-  min-height: calc(100vh - 140px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .job-posts-container h2 {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
   color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .job-post-card {
   margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.job-post-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
@@ -386,51 +406,52 @@ export default {
 }
 
 .card-header .title {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 600;
   color: #303133;
+}
+
+.card-content {
+  font-size: 14px;
 }
 
 .card-content .description {
   color: #606266;
-  font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   margin-bottom: 15px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  min-height: 45px;
 }
 
 .info-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: #606266;
   font-size: 14px;
 }
 
 .info-row .el-icon {
   margin-right: 8px;
+  color: #909399;
 }
 
 .price-row {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #ebeef5;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ebeef5;
+}
+
+.price-row .price {
+  font-size: 20px;
+  font-weight: bold;
+  color: #f56c6c;
 }
 
 .action-buttons {
   display: flex;
-  gap: 8px;
-}
-
-.price {
-  font-size: 20px;
-  font-weight: bold;
-  color: #f56c6c;
+  gap: 10px;
 }
 </style>

@@ -21,6 +21,12 @@ public class TeacherJobPost {
     private String subject;
     private Double pricePerHour;
     private String location;
+    private String locationProvince;
+    private String locationCity;
+    private String locationDistrict;
+    private String locationFormatted;
+    private Double locationLongitude;
+    private Double locationLatitude;
     private String availability;
     private Date createdAt;
     private Date updatedAt;
