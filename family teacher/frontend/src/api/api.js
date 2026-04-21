@@ -96,8 +96,8 @@ export const evaluationApi = {
 
 // 推荐相关API
 export const recommendationApi = {
-  getTeachers: (params) => api.get('/recommendations/teachers', { params }),
-  getStudents: (params) => api.get('/recommendations/students', { params })
+  getTeachersForStudent: () => api.get('/recommendations/teachers-for-student'),
+  getStudentsForTeacher: () => api.get('/recommendations/students-for-teacher')
 };
 
 // 收藏相关API
@@ -106,6 +106,14 @@ export const favoriteApi = {
   remove: (data) => api.delete('/favorites/remove', { data }),
   getList: (resourceType) => api.get('/favorites/list', { params: { resourceType } }),
   check: (resourceType, resourceId) => api.get('/favorites/check', { params: { resourceType, resourceId } })
+};
+
+// 管理员相关API
+export const adminApi = {
+  getUsers: () => api.get('/admin/users'),
+  getAppointments: () => api.get('/admin/appointments'),
+  getEvaluations: () => api.get('/admin/evaluations'),
+  getStatistics: () => api.get('/admin/statistics')
 };
 
 export default api;

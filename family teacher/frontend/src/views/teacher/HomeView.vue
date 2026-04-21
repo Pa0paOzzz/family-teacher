@@ -48,12 +48,25 @@
 
       <el-main class="main-content">
         <div class="search-container">
-          <el-input
+          <el-select
               v-model="searchSubject"
-              placeholder="搜索学科"
-              style="width: 300px; margin-right: 10px;"
-              @keyup.enter="searchRequests"
-          ></el-input>
+              placeholder="选择学科"
+              clearable
+              style="width: 200px; margin-right: 10px;"
+          >
+            <el-option label="语文" value="语文"></el-option>
+            <el-option label="数学" value="数学"></el-option>
+            <el-option label="英语" value="英语"></el-option>
+            <el-option label="政治" value="政治"></el-option>
+            <el-option label="历史" value="历史"></el-option>
+            <el-option label="地理" value="地理"></el-option>
+            <el-option label="化学" value="化学"></el-option>
+            <el-option label="生物" value="生物"></el-option>
+            <el-option label="物理" value="物理"></el-option>
+            <el-option label="信息技术" value="信息技术"></el-option>
+            <el-option label="美术" value="美术"></el-option>
+            <el-option label="音乐" value="音乐"></el-option>
+          </el-select>
           <el-button type="primary" @click="searchRequests">搜索</el-button>
           <el-button @click="resetSearch">重置</el-button>
         </div>
@@ -107,7 +120,7 @@
               </el-card>
             </el-col>
           </el-row>
-          <el-empty v-if="requestList.length === 0" description="暂无学生需求信息"></el-empty>
+          <el-empty v-if="requestList.length === 0" :description="emptyDescription"></el-empty>
         </div>
 
         <el-dialog v-model="contactDialogVisible" title="联系学生" width="500px">
@@ -195,7 +208,7 @@
 </template>
 
 <script>
-import { tutoringRequestApi, favoriteApi } from '../../api/api';
+import { recommendationApi, tutoringRequestApi, favoriteApi, userApi } from '../../api/api';
 import { getDisplayLocation } from '../../utils/location';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
@@ -223,6 +236,7 @@ export default {
       contactDialogVisible: false,
       detailDialogVisible: false,
       selectedRequest: null,
+      emptyDescription: '暂无学生推荐',
       contactForm: {
         message: ''
       }
@@ -265,27 +279,30 @@ export default {
     },
     async loadRequests() {
       try {
-        const [requests, favorites] = await Promise.all([
-          tutoringRequestApi.getList(),
-          favoriteApi.getList('STUDENT_TUTORING_REQUEST')
+        const [requests, favorites, profile] = await Promise.all([
+          recommendationApi.getStudentsForTeacher(),
+          favoriteApi.getList('STUDENT_TUTORING_REQUEST'),
+          userApi.getTeacherProfile()
         ]);
         this.requestList = requests || [];
         this.favoriteIds = (favorites || []).map(favorite => favorite.resourceId).filter(id => id != null);
+        this.emptyDescription = profile?.addressCity ? '暂无学生推荐' : '请先在个人资料中填写所在城市，以优先获取同市学生推荐';
       } catch (error) {
-        console.error('加载学生需求信息失败:', error);
-        this.$message.error('加载学生需求信息失败');
+        console.error('加载学生推荐信息失败:', error);
+        this.$message.error('加载学生推荐信息失败');
       }
     },
     async searchRequests() {
-      if (!this.searchSubject.trim()) {
+      if (!this.searchSubject) {
         this.loadRequests();
         return;
       }
       try {
         const response = await tutoringRequestApi.getList();
         this.requestList = (response || []).filter(req =>
-            req.subject && req.subject.toLowerCase().includes(this.searchSubject.toLowerCase())
+            req.subject === this.searchSubject
         );
+        this.emptyDescription = '暂无学生需求信息';
       } catch (error) {
         console.error('搜索失败:', error);
         this.$message.error('搜索失败');

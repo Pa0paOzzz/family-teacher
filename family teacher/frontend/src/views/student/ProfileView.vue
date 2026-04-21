@@ -224,7 +224,7 @@ export default {
               ...buildLocationPayload('address', this.studentForm)
             });
             this.$message.success('保存成功');
-            this.loadProfile();
+            this.$router.push('/student/home');
           } catch (error) {
             console.error('保存个人资料失败:', error);
             this.$message.error('保存失败: ' + (error.response?.data?.error || error.message));

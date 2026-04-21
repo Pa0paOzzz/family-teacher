@@ -8,114 +8,205 @@ import com.familyteacher.backend.repository.TeacherJobPostRepository;
 import com.familyteacher.backend.repository.StudentTutoringRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.*;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class RecommendationService {
+    private static final Set<String> MUNICIPALITIES = Set.of("北京市", "上海市", "天津市", "重庆市");
+
     @Autowired
     private TeacherJobPostRepository teacherJobPostRepository;
-    
+
     @Autowired
     private StudentTutoringRequestRepository studentTutoringRequestRepository;
-    
-    // 推荐家教给学生
-    public List<TeacherJobPost> recommendTeachersForStudent(Student student, StudentTutoringRequest request) {
-        List<TeacherJobPost> allActiveJobPosts = teacherJobPostRepository.findByActiveTrue();
-        
-        // 计算每个家教职位与学生需求的匹配度
-        Map<TeacherJobPost, Double> scores = new HashMap<>();
-        for (TeacherJobPost jobPost : allActiveJobPosts) {
-            double score = calculateTeacherMatchScore(jobPost, request);
-            scores.put(jobPost, score);
-        }
-        
-        // 按匹配度排序，返回前10个
-        return scores.entrySet().stream()
-                .sorted(Map.Entry.<TeacherJobPost, Double>comparingByValue().reversed())
-                .limit(10)
-                .map(Map.Entry::getKey)
+
+    public List<TeacherJobPost> recommendTeachersForStudent(Student student) {
+        String city = normalizeCity(student == null ? null : student.getAddressCity());
+        String province = normalizeProvince(student == null ? null : student.getAddressProvince());
+        String district = normalizeDistrict(student == null ? null : student.getAddressDistrict());
+        List<TeacherJobPost> allPosts = teacherJobPostRepository.findByActiveTrue().stream()
+                .sorted(latestFirstTeacherPost())
                 .collect(Collectors.toList());
+
+        return prioritizeByLocation(
+                allPosts,
+                city,
+                province,
+                district,
+                TeacherJobPost::getLocationCity,
+                TeacherJobPost::getLocationProvince,
+                TeacherJobPost::getLocationDistrict
+        ).stream().limit(10).collect(Collectors.toList());
     }
-    
-    // 推荐学生给家教
-    public List<StudentTutoringRequest> recommendStudentsForTeacher(Teacher teacher, TeacherJobPost jobPost) {
-        List<StudentTutoringRequest> allActiveRequests = studentTutoringRequestRepository.findByActiveTrue();
-        
-        // 计算每个学生需求与家教职位的匹配度
-        Map<StudentTutoringRequest, Double> scores = new HashMap<>();
-        for (StudentTutoringRequest request : allActiveRequests) {
-            double score = calculateStudentMatchScore(request, jobPost);
-            scores.put(request, score);
-        }
-        
-        // 按匹配度排序，返回前10个
-        return scores.entrySet().stream()
-                .sorted(Map.Entry.<StudentTutoringRequest, Double>comparingByValue().reversed())
-                .limit(10)
-                .map(Map.Entry::getKey)
+
+    public List<StudentTutoringRequest> recommendStudentsForTeacher(Teacher teacher) {
+        String city = normalizeCity(teacher == null ? null : teacher.getAddressCity());
+        String province = normalizeProvince(teacher == null ? null : teacher.getAddressProvince());
+        String district = normalizeDistrict(teacher == null ? null : teacher.getAddressDistrict());
+        List<StudentTutoringRequest> allRequests = studentTutoringRequestRepository.findByActiveTrue().stream()
+                .sorted(latestFirstStudentRequest())
                 .collect(Collectors.toList());
+
+        return prioritizeByLocation(
+                allRequests,
+                city,
+                province,
+                district,
+                StudentTutoringRequest::getLocationCity,
+                StudentTutoringRequest::getLocationProvince,
+                StudentTutoringRequest::getLocationDistrict
+        ).stream().limit(10).collect(Collectors.toList());
     }
-    
-    // 计算家教职位与学生需求的匹配度
-    private double calculateTeacherMatchScore(TeacherJobPost jobPost, StudentTutoringRequest request) {
-        double score = 0.0;
-        
-        // 学科匹配（权重40%）
-        if (jobPost.getSubject().equalsIgnoreCase(request.getSubject())) {
-            score += 40.0;
-        } else if (jobPost.getSubject().toLowerCase().contains(request.getSubject().toLowerCase())) {
-            score += 20.0;
+
+    private <T> List<T> prioritizeByLocation(List<T> resources,
+                                             String profileCity,
+                                             String profileProvince,
+                                             String profileDistrict,
+                                             java.util.function.Function<T, String> cityGetter,
+                                             java.util.function.Function<T, String> provinceGetter,
+                                             java.util.function.Function<T, String> districtGetter) {
+        if (profileCity == null && profileProvince == null && profileDistrict == null) {
+            return resources;
         }
-        
-        // 价格匹配（权重20%）
-        double priceDifference = Math.abs(jobPost.getPricePerHour() - request.getBudgetPerHour());
-        double priceRatio = Math.max(0, 1 - priceDifference / request.getBudgetPerHour());
-        score += priceRatio * 20.0;
-        
-        // 位置匹配（权重20%）
-        if (jobPost.getLocation().equalsIgnoreCase(request.getLocation())) {
-            score += 20.0;
+
+        List<T> sameCity = new ArrayList<>();
+        List<T> sameMunicipalityDistrict = new ArrayList<>();
+        List<T> sameMunicipality = new ArrayList<>();
+        List<T> otherLocation = new ArrayList<>();
+
+        for (T resource : resources) {
+            String resourceCity = cityGetter.apply(resource);
+            String resourceProvince = provinceGetter.apply(resource);
+            String resourceDistrict = districtGetter.apply(resource);
+
+            if (isExactSameCity(profileCity, resourceCity)) {
+                sameCity.add(resource);
+            } else if (isSameMunicipalityDistrict(profileCity, profileProvince, profileDistrict, resourceCity, resourceProvince, resourceDistrict)) {
+                sameMunicipalityDistrict.add(resource);
+            } else if (isSameMunicipalityArea(profileCity, profileProvince, resourceCity, resourceProvince)) {
+                sameMunicipality.add(resource);
+            } else {
+                otherLocation.add(resource);
+            }
         }
-        
-        // 家教评分（权重20%）
-        Teacher teacher = jobPost.getTeacher();
-        if (teacher != null && teacher.getRating() != null) {
-            score += (teacher.getRating() / 5.0) * 20.0;
-        }
-        
-        return score;
+
+        sameCity.addAll(sameMunicipalityDistrict);
+        sameCity.addAll(sameMunicipality);
+        sameCity.addAll(otherLocation);
+        return sameCity;
     }
-    
-    // 计算学生需求与家教职位的匹配度
-    private double calculateStudentMatchScore(StudentTutoringRequest request, TeacherJobPost jobPost) {
-        double score = 0.0;
-        
-        // 学科匹配（权重40%）
-        if (request.getSubject().equalsIgnoreCase(jobPost.getSubject())) {
-            score += 40.0;
-        } else if (request.getSubject().toLowerCase().contains(jobPost.getSubject().toLowerCase())) {
-            score += 20.0;
+
+    private boolean isExactSameCity(String profileCity, String resourceCity) {
+        String normalizedProfileCity = normalizeCity(profileCity);
+        String normalizedResourceCity = normalizeCity(resourceCity);
+        return normalizedProfileCity != null && normalizedProfileCity.equals(normalizedResourceCity);
+    }
+
+    private boolean isSameMunicipalityDistrict(String profileCity,
+                                               String profileProvince,
+                                               String profileDistrict,
+                                               String resourceCity,
+                                               String resourceProvince,
+                                               String resourceDistrict) {
+        if (!isSameMunicipalityArea(profileCity, profileProvince, resourceCity, resourceProvince)) {
+            return false;
         }
-        
-        // 价格匹配（权重20%）
-        double priceDifference = Math.abs(request.getBudgetPerHour() - jobPost.getPricePerHour());
-        double priceRatio = Math.max(0, 1 - priceDifference / jobPost.getPricePerHour());
-        score += priceRatio * 20.0;
-        
-        // 位置匹配（权重20%）
-        if (request.getLocation().equalsIgnoreCase(jobPost.getLocation())) {
-            score += 20.0;
+        String normalizedProfileDistrict = normalizeDistrict(profileDistrict);
+        String normalizedResourceDistrict = normalizeDistrict(resourceDistrict);
+        return normalizedProfileDistrict != null && normalizedProfileDistrict.equals(normalizedResourceDistrict);
+    }
+
+    private boolean isSameMunicipalityArea(String profileCity, String profileProvince,
+                                           String resourceCity, String resourceProvince) {
+        String normalizedProfileCity = normalizeCity(profileCity);
+        String normalizedProfileProvince = normalizeProvince(profileProvince);
+        String normalizedResourceCity = normalizeCity(resourceCity);
+        String normalizedResourceProvince = normalizeProvince(resourceProvince);
+
+        String profileMunicipality = getMunicipality(normalizedProfileCity, normalizedProfileProvince);
+        if (profileMunicipality == null) {
+            return false;
         }
-        
-        // 活跃度（权重20%）
-        long daysSinceCreation = (System.currentTimeMillis() - request.getCreatedAt().getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceCreation <= 7) {
-            score += 20.0;
-        } else if (daysSinceCreation <= 30) {
-            score += 10.0;
+
+        String resourceMunicipality = getMunicipality(normalizedResourceCity, normalizedResourceProvince);
+        return profileMunicipality.equals(resourceMunicipality);
+    }
+
+    private String getMunicipality(String city, String province) {
+        if (!StringUtils.hasText(city) && !StringUtils.hasText(province)) {
+            return null;
         }
-        
-        return score;
+
+        String textToCheck = StringUtils.hasText(city) ? city : province;
+
+        for (String municipality : MUNICIPALITIES) {
+            String normalizedMunicipality = normalizeCity(municipality);
+            String shortName = normalizedMunicipality.replace("市", "");
+            if (textToCheck.equals(normalizedMunicipality)
+                    || textToCheck.equals(shortName)
+                    || textToCheck.startsWith(normalizedMunicipality)
+                    || textToCheck.startsWith(shortName)) {
+                return normalizedMunicipality;
+            }
+        }
+        return null;
+    }
+
+    private Comparator<TeacherJobPost> latestFirstTeacherPost() {
+        return Comparator.comparing(
+                        TeacherJobPost::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+                .thenComparing(
+                        TeacherJobPost::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+                .thenComparing(
+                        TeacherJobPost::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                );
+    }
+
+    private Comparator<StudentTutoringRequest> latestFirstStudentRequest() {
+        return Comparator.comparing(
+                        StudentTutoringRequest::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+                .thenComparing(
+                        StudentTutoringRequest::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+                .thenComparing(
+                        StudentTutoringRequest::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                );
+    }
+
+    private String normalizeCity(String city) {
+        if (!StringUtils.hasText(city)) {
+            return null;
+        }
+        return city.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeProvince(String province) {
+        if (!StringUtils.hasText(province)) {
+            return null;
+        }
+        return province.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeDistrict(String district) {
+        if (!StringUtils.hasText(district)) {
+            return null;
+        }
+        return district.trim().toLowerCase(Locale.ROOT);
     }
 }

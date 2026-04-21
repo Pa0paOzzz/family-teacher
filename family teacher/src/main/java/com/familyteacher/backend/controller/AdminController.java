@@ -50,7 +50,13 @@ public class AdminController {
     public List<AppointmentRequest> getAllAppointments() {
         return adminService.getAllAppointments();
     }
-    
+
+    // 评价管理
+    @GetMapping("/evaluations")
+    public List<Map<String, Object>> getAllEvaluations() {
+        return adminService.getAllEvaluations();
+    }
+
     // 订单管理
     @GetMapping("/orders")
     public List<Order> getAllOrders() {

@@ -52,7 +52,20 @@
               <el-input v-model="jobPostForm.description" type="textarea" rows="4" placeholder="请详细描述求职信息"></el-input>
             </el-form-item>
             <el-form-item label="学科" prop="subject">
-              <el-input v-model="jobPostForm.subject" placeholder="请输入擅长学科"></el-input>
+              <el-select v-model="jobPostForm.subject" placeholder="请选择学科" style="width: 100%">
+                <el-option label="语文" value="语文"></el-option>
+                <el-option label="数学" value="数学"></el-option>
+                <el-option label="英语" value="英语"></el-option>
+                <el-option label="政治" value="政治"></el-option>
+                <el-option label="历史" value="历史"></el-option>
+                <el-option label="地理" value="地理"></el-option>
+                <el-option label="化学" value="化学"></el-option>
+                <el-option label="生物" value="生物"></el-option>
+                <el-option label="物理" value="物理"></el-option>
+                <el-option label="信息技术" value="信息技术"></el-option>
+                <el-option label="美术" value="美术"></el-option>
+                <el-option label="音乐" value="音乐"></el-option>
+              </el-select>
             </el-form-item>
             <el-form-item label="价格/小时" prop="pricePerHour">
               <el-input v-model.number="jobPostForm.pricePerHour" type="number" placeholder="请输入每小时价格"></el-input>

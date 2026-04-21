@@ -162,20 +162,40 @@ public class AppointmentController {
                 item.put("teacherName", appointment.getTeacher().getUser().getName());
                 item.put("teacherId", appointment.getTeacher().getId());
                 item.put("teacherUserId", appointment.getTeacher().getUser().getId());
+                item.put("teacherPhone", appointment.getTeacher().getUser().getPhone() != null ? appointment.getTeacher().getUser().getPhone() : "未填写");
+                item.put("teacherEmail", appointment.getTeacher().getUser().getEmail() != null ? appointment.getTeacher().getUser().getEmail() : "未填写");
+                item.put("teacherSchool", appointment.getTeacher().getSchool() != null ? appointment.getTeacher().getSchool() : "未填写");
+                item.put("teacherMajor", appointment.getTeacher().getMajor() != null ? appointment.getTeacher().getMajor() : "未填写");
             } else {
                 item.put("teacherName", "未知");
                 item.put("teacherId", 0);
                 item.put("teacherUserId", 0);
+                item.put("teacherPhone", "未知");
+                item.put("teacherEmail", "未知");
+                item.put("teacherSchool", "未知");
+                item.put("teacherMajor", "未知");
             }
             
             if (appointment.getStudent() != null && appointment.getStudent().getUser() != null) {
                 item.put("studentName", appointment.getStudent().getUser().getName());
                 item.put("studentId", appointment.getStudent().getId());
                 item.put("studentUserId", appointment.getStudent().getUser().getId());
+                item.put("studentPhone", appointment.getStudent().getUser().getPhone() != null ? appointment.getStudent().getUser().getPhone() : "未填写");
+                item.put("studentEmail", appointment.getStudent().getUser().getEmail() != null ? appointment.getStudent().getUser().getEmail() : "未填写");
+                item.put("studentSchool", appointment.getStudent().getSchool() != null ? appointment.getStudent().getSchool() : "未填写");
+                item.put("studentGrade", appointment.getStudent().getGrade() != null ? appointment.getStudent().getGrade() : "未填写");
+                item.put("studentMajor", appointment.getStudent().getMajor() != null ? appointment.getStudent().getMajor() : "未填写");
+                item.put("studentAddress", appointment.getStudent().getAddressFormatted() != null ? appointment.getStudent().getAddressFormatted() : "未填写");
             } else {
                 item.put("studentName", "未知");
                 item.put("studentId", 0);
                 item.put("studentUserId", 0);
+                item.put("studentPhone", "未知");
+                item.put("studentEmail", "未知");
+                item.put("studentSchool", "未知");
+                item.put("studentGrade", "未知");
+                item.put("studentMajor", "未知");
+                item.put("studentAddress", "未知");
             }
             
             result.add(item);
@@ -228,20 +248,40 @@ public class AppointmentController {
             result.put("teacherName", appointment.getTeacher().getUser().getName());
             result.put("teacherId", appointment.getTeacher().getId());
             result.put("teacherUserId", appointment.getTeacher().getUser().getId());
+            result.put("teacherPhone", appointment.getTeacher().getUser().getPhone() != null ? appointment.getTeacher().getUser().getPhone() : "未填写");
+            result.put("teacherEmail", appointment.getTeacher().getUser().getEmail() != null ? appointment.getTeacher().getUser().getEmail() : "未填写");
+            result.put("teacherSchool", appointment.getTeacher().getSchool() != null ? appointment.getTeacher().getSchool() : "未填写");
+            result.put("teacherMajor", appointment.getTeacher().getMajor() != null ? appointment.getTeacher().getMajor() : "未填写");
         } else {
             result.put("teacherName", "未知");
             result.put("teacherId", 0);
             result.put("teacherUserId", 0);
+            result.put("teacherPhone", "未知");
+            result.put("teacherEmail", "未知");
+            result.put("teacherSchool", "未知");
+            result.put("teacherMajor", "未知");
         }
         
         if (appointment.getStudent() != null && appointment.getStudent().getUser() != null) {
             result.put("studentName", appointment.getStudent().getUser().getName());
             result.put("studentId", appointment.getStudent().getId());
             result.put("studentUserId", appointment.getStudent().getUser().getId());
+            result.put("studentPhone", appointment.getStudent().getUser().getPhone() != null ? appointment.getStudent().getUser().getPhone() : "未填写");
+            result.put("studentEmail", appointment.getStudent().getUser().getEmail() != null ? appointment.getStudent().getUser().getEmail() : "未填写");
+            result.put("studentSchool", appointment.getStudent().getSchool() != null ? appointment.getStudent().getSchool() : "未填写");
+            result.put("studentGrade", appointment.getStudent().getGrade() != null ? appointment.getStudent().getGrade() : "未填写");
+            result.put("studentMajor", appointment.getStudent().getMajor() != null ? appointment.getStudent().getMajor() : "未填写");
+            result.put("studentAddress", appointment.getStudent().getAddressFormatted() != null ? appointment.getStudent().getAddressFormatted() : "未填写");
         } else {
             result.put("studentName", "未知");
             result.put("studentId", 0);
             result.put("studentUserId", 0);
+            result.put("studentPhone", "未知");
+            result.put("studentEmail", "未知");
+            result.put("studentSchool", "未知");
+            result.put("studentGrade", "未知");
+            result.put("studentMajor", "未知");
+            result.put("studentAddress", "未知");
         }
         
         return result;

@@ -70,7 +70,20 @@
               <el-input v-model="teacherForm.teachingExperience" type="textarea" rows="3"></el-input>
             </el-form-item>
             <el-form-item label="擅长学科" prop="subject">
-              <el-input v-model="teacherForm.subject"></el-input>
+              <el-select v-model="teacherForm.subject" placeholder="请选择学科" style="width: 100%">
+                <el-option label="语文" value="语文"></el-option>
+                <el-option label="数学" value="数学"></el-option>
+                <el-option label="英语" value="英语"></el-option>
+                <el-option label="政治" value="政治"></el-option>
+                <el-option label="历史" value="历史"></el-option>
+                <el-option label="地理" value="地理"></el-option>
+                <el-option label="化学" value="化学"></el-option>
+                <el-option label="生物" value="生物"></el-option>
+                <el-option label="物理" value="物理"></el-option>
+                <el-option label="信息技术" value="信息技术"></el-option>
+                <el-option label="美术" value="美术"></el-option>
+                <el-option label="音乐" value="音乐"></el-option>
+              </el-select>
             </el-form-item>
             <el-form-item label="个人简介" prop="bio">
               <el-input v-model="teacherForm.bio" type="textarea" rows="4"></el-input>
@@ -260,7 +273,7 @@ export default {
               ...buildLocationPayload('address', this.teacherForm)
             });
             this.$message.success('保存成功');
-            this.loadProfile();
+            this.$router.push('/teacher/home');
           } catch (error) {
             console.error('保存个人资料失败:', error);
             this.$message.error('保存失败: ' + (error.response?.data?.error || error.message));

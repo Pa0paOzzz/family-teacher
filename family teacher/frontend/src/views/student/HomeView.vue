@@ -44,12 +44,25 @@
       <el-main>
         <div class="main-content">
           <div class="search-container">
-            <el-input
+            <el-select
               v-model="searchSubject"
-              placeholder="搜索学科"
-              style="width: 300px; margin-right: 10px;"
-              @keyup.enter="searchJobPosts"
-            ></el-input>
+              placeholder="选择学科"
+              clearable
+              style="width: 200px; margin-right: 10px;"
+            >
+              <el-option label="语文" value="语文"></el-option>
+              <el-option label="数学" value="数学"></el-option>
+              <el-option label="英语" value="英语"></el-option>
+              <el-option label="政治" value="政治"></el-option>
+              <el-option label="历史" value="历史"></el-option>
+              <el-option label="地理" value="地理"></el-option>
+              <el-option label="化学" value="化学"></el-option>
+              <el-option label="生物" value="生物"></el-option>
+              <el-option label="物理" value="物理"></el-option>
+              <el-option label="信息技术" value="信息技术"></el-option>
+              <el-option label="美术" value="美术"></el-option>
+              <el-option label="音乐" value="音乐"></el-option>
+            </el-select>
             <el-button type="primary" @click="searchJobPosts">搜索</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </div>
@@ -102,7 +115,7 @@
                 </el-card>
               </el-col>
             </el-row>
-            <el-empty v-if="jobPostList.length === 0" description="暂无教师求职信息"></el-empty>
+            <el-empty v-if="jobPostList.length === 0" :description="emptyDescription"></el-empty>
           </div>
         </div>
 
@@ -137,7 +150,7 @@
 </template>
 
 <script>
-import { jobPostApi, appointmentApi, favoriteApi } from '../../api/api';
+import { recommendationApi, jobPostApi, appointmentApi, favoriteApi, userApi } from '../../api/api';
 import { getDisplayLocation } from '../../utils/location';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
@@ -164,6 +177,7 @@ export default {
       favoriteLoadingIds: [],
       appointmentDialogVisible: false,
       selectedJobPost: null,
+      emptyDescription: '暂无教师推荐',
       appointmentForm: {
         appointmentTime: '',
         remark: ''
@@ -204,27 +218,30 @@ export default {
     },
     async loadJobPosts() {
       try {
-        const [jobPosts, favorites] = await Promise.all([
-          jobPostApi.getList(),
-          favoriteApi.getList('TEACHER_JOB_POST')
+        const [jobPosts, favorites, profile] = await Promise.all([
+          recommendationApi.getTeachersForStudent(),
+          favoriteApi.getList('TEACHER_JOB_POST'),
+          userApi.getStudentProfile()
         ]);
         this.jobPostList = jobPosts || [];
         this.favoriteIds = (favorites || []).map(favorite => favorite.resourceId).filter(id => id != null);
+        this.emptyDescription = profile?.addressCity ? '暂无教师推荐' : '请先在个人资料中填写所在城市，以优先获取同市教师推荐';
       } catch (error) {
-        console.error('加载教师求职信息失败:', error);
-        this.$message.error('加载教师求职信息失败');
+        console.error('加载教师推荐信息失败:', error);
+        this.$message.error('加载教师推荐信息失败');
       }
     },
     async searchJobPosts() {
-      if (!this.searchSubject.trim()) {
+      if (!this.searchSubject) {
         this.loadJobPosts();
         return;
       }
       try {
         const response = await jobPostApi.getList();
         this.jobPostList = (response || []).filter(post =>
-          post.subject && post.subject.toLowerCase().includes(this.searchSubject.toLowerCase())
+          post.subject === this.searchSubject
         );
+        this.emptyDescription = '暂无教师求职信息';
       } catch (error) {
         console.error('搜索失败:', error);
         this.$message.error('搜索失败');

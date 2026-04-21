@@ -133,6 +133,18 @@
             <el-descriptions-item label="家教老师" :span="2">
               {{ selectedAppointment?.teacherName || '未知' }}
             </el-descriptions-item>
+            <el-descriptions-item label="学校">
+              {{ selectedAppointment?.teacherSchool || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="专业">
+              {{ selectedAppointment?.teacherMajor || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="联系电话">
+              {{ selectedAppointment?.teacherPhone || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              {{ selectedAppointment?.teacherEmail || '未知' }}
+            </el-descriptions-item>
             <el-descriptions-item label="学科">
               {{ selectedAppointment?.subject || '未知' }}
             </el-descriptions-item>

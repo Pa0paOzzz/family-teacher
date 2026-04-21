@@ -24,6 +24,10 @@
             <span>预约管理</span>
           </el-menu-item>
           <el-menu-item index="4">
+            <el-icon><Comment /></el-icon>
+            <span>评价管理</span>
+          </el-menu-item>
+          <el-menu-item index="5">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -127,7 +131,7 @@
 </template>
 
 <script>
-import { User, DataLine, Calendar, SwitchButton } from '@element-plus/icons-vue';
+import { User, DataLine, Calendar, SwitchButton, Comment } from '@element-plus/icons-vue';
 
 export default {
   name: 'AdminDashboardView',
@@ -135,6 +139,7 @@ export default {
     User,
     DataLine,
     Calendar,
+    Comment,
     SwitchButton
   },
   data() {
@@ -164,6 +169,9 @@ export default {
           this.$router.push('/admin/appointments');
           break;
         case '4':
+          this.$router.push('/admin/evaluations');
+          break;
+        case '5':
           this.logout();
           break;
       }
