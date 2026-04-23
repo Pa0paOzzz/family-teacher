@@ -74,6 +74,7 @@ export const tutoringRequestApi = {
 // 预约相关API
 export const appointmentApi = {
   create: (data) => api.post('/transactions/appointments', data),
+  createForTeacher: (data) => api.post('/transactions/appointments', data),
   getList: () => api.get('/transactions/appointments'),
   getById: (id) => api.get(`/transactions/appointments/${id}`),
   update: (id, data) => api.put(`/transactions/appointments/${id}`, data),

@@ -132,6 +132,7 @@
 
 <script>
 import { User, DataLine, Calendar, SwitchButton, Comment } from '@element-plus/icons-vue';
+import axios from 'axios';
 
 export default {
   name: 'AdminDashboardView',
@@ -146,17 +147,34 @@ export default {
     return {
       activeIndex: '1',
       statistics: {
-        totalUsers: 100,
-        totalTeachers: 50,
-        totalStudents: 50,
-        totalOrders: 200,
-        totalAppointments: 250,
-        pendingAppointments: 20,
-        completedAppointments: 230
+        totalUsers: 0,
+        totalTeachers: 0,
+        totalStudents: 0,
+        totalOrders: 0,
+        totalAppointments: 0,
+        pendingAppointments: 0,
+        completedAppointments: 0
       }
     }
   },
+  mounted() {
+    this.loadStatistics();
+  },
   methods: {
+    async loadStatistics() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:8080/api/admin/statistics', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        this.statistics = response.data;
+      } catch (error) {
+        console.error('加载统计数据失败:', error);
+        this.$message.error('加载统计数据失败');
+      }
+    },
     handleMenuSelect(index) {
       switch(index) {
         case '1':

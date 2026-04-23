@@ -123,7 +123,7 @@
           <el-empty v-if="requestList.length === 0" :description="emptyDescription"></el-empty>
         </div>
 
-        <el-dialog v-model="contactDialogVisible" title="联系学生" width="500px">
+        <el-dialog v-model="contactDialogVisible" title="预约学生" width="600px">
           <el-form :model="contactForm" label-width="100px">
             <el-form-item label="学生姓名">
               <el-input :value="selectedRequest?.student?.user?.name" disabled></el-input>
@@ -131,18 +131,27 @@
             <el-form-item label="学科">
               <el-input :value="selectedRequest?.subject" disabled></el-input>
             </el-form-item>
-            <el-form-item label="联系方式">
-              <el-input :value="selectedRequest?.student?.user?.phone || '未填写'" disabled></el-input>
+            <el-form-item label="预约时间" required>
+              <el-date-picker
+                v-model="contactForm.appointmentTime"
+                type="datetime"
+                placeholder="选择预约时间"
+                style="width: 100%"
+              ></el-date-picker>
             </el-form-item>
-            <el-form-item label="邮箱">
-              <el-input :value="selectedRequest?.student?.user?.email || '未填写'" disabled></el-input>
+            <el-form-item label="上课地点" required>
+              <el-input v-model="contactForm.location" placeholder="请输入上课地点"></el-input>
+            </el-form-item>
+            <el-form-item label="价格/小时" required>
+              <el-input-number v-model="contactForm.pricePerHour" :min="0" :precision="2" :step="10" style="width: 100%" placeholder="请输入每小时价格"></el-input-number>
             </el-form-item>
             <el-form-item label="留言">
               <el-input v-model="contactForm.message" type="textarea" rows="3" placeholder="请输入留言内容"></el-input>
             </el-form-item>
           </el-form>
           <template #footer>
-            <el-button @click="contactDialogVisible = false">关闭</el-button>
+            <el-button @click="contactDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitAppointment">确认预约</el-button>
           </template>
         </el-dialog>
 
@@ -208,7 +217,7 @@
 </template>
 
 <script>
-import { recommendationApi, tutoringRequestApi, favoriteApi, userApi } from '../../api/api';
+import { recommendationApi, tutoringRequestApi, appointmentApi, favoriteApi, userApi } from '../../api/api';
 import { getDisplayLocation } from '../../utils/location';
 import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
@@ -238,6 +247,9 @@ export default {
       selectedRequest: null,
       emptyDescription: '暂无学生推荐',
       contactForm: {
+        appointmentTime: '',
+        location: '',
+        pricePerHour: null,
         message: ''
       }
     }
@@ -348,6 +360,12 @@ export default {
     },
     openContactDialog(request) {
       this.selectedRequest = request;
+      this.contactForm = {
+        appointmentTime: '',
+        location: request?.locationFormatted || request?.location || '',
+        pricePerHour: request?.budgetPerHour || null,
+        message: ''
+      };
       this.contactDialogVisible = true;
     },
     openDetailDialog(request) {
@@ -356,7 +374,42 @@ export default {
     },
     contactFromDetail() {
       this.detailDialogVisible = false;
-      this.contactDialogVisible = true;
+      this.openContactDialog(this.selectedRequest);
+    },
+    async submitAppointment() {
+      if (!this.contactForm.appointmentTime) {
+        this.$message.warning('请选择预约时间');
+        return;
+      }
+      if (!this.contactForm.location) {
+        this.$message.warning('请输入上课地点');
+        return;
+      }
+      if (this.contactForm.pricePerHour == null) {
+        this.$message.warning('请输入价格/小时');
+        return;
+      }
+      try {
+        await appointmentApi.createForTeacher({
+          studentId: this.selectedRequest?.student?.id,
+          appointmentTime: this.contactForm.appointmentTime,
+          subject: this.selectedRequest?.subject,
+          location: this.contactForm.location,
+          pricePerHour: this.contactForm.pricePerHour,
+          remark: this.contactForm.message
+        });
+        this.$message.success('预约成功');
+        this.contactDialogVisible = false;
+        this.contactForm = {
+          appointmentTime: '',
+          location: '',
+          pricePerHour: null,
+          message: ''
+        };
+      } catch (error) {
+        console.error('预约失败:', error);
+        this.$message.error('预约失败: ' + (error.response?.data?.error || error.message));
+      }
     },
     logout() {
       localStorage.removeItem('token');

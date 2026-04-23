@@ -119,7 +119,7 @@
           </div>
         </div>
 
-        <el-dialog v-model="appointmentDialogVisible" title="预约教师" width="500px">
+        <el-dialog v-model="appointmentDialogVisible" title="预约教师" width="600px">
           <el-form :model="appointmentForm" label-width="100px">
             <el-form-item label="老师姓名">
               <el-input :value="selectedJobPost?.teacher?.user?.name" disabled></el-input>
@@ -127,13 +127,19 @@
             <el-form-item label="学科">
               <el-input :value="selectedJobPost?.subject" disabled></el-input>
             </el-form-item>
-            <el-form-item label="预约时间">
+            <el-form-item label="预约时间" required>
               <el-date-picker
                 v-model="appointmentForm.appointmentTime"
                 type="datetime"
                 placeholder="选择预约时间"
                 style="width: 100%"
               ></el-date-picker>
+            </el-form-item>
+            <el-form-item label="上课地点" required>
+              <el-input v-model="appointmentForm.location" placeholder="请输入上课地点"></el-input>
+            </el-form-item>
+            <el-form-item label="价格/小时" required>
+              <el-input-number v-model="appointmentForm.pricePerHour" :min="0" :precision="2" :step="10" style="width: 100%" placeholder="请输入每小时价格"></el-input-number>
             </el-form-item>
             <el-form-item label="备注">
               <el-input v-model="appointmentForm.remark" type="textarea" rows="3" placeholder="请输入备注信息"></el-input>
@@ -180,6 +186,8 @@ export default {
       emptyDescription: '暂无教师推荐',
       appointmentForm: {
         appointmentTime: '',
+        location: '',
+        pricePerHour: null,
         remark: ''
       }
     }
@@ -294,16 +302,29 @@ export default {
         this.$message.warning('请选择预约时间');
         return;
       }
+      if (!this.appointmentForm.location) {
+        this.$message.warning('请输入上课地点');
+        return;
+      }
+      if (!this.appointmentForm.pricePerHour || this.appointmentForm.pricePerHour <= 0) {
+        this.$message.warning('请输入有效的价格');
+        return;
+      }
       try {
         await appointmentApi.create({
           teacherId: this.selectedJobPost.teacher?.id,
+          subject: this.selectedJobPost.subject,
           appointmentTime: this.appointmentForm.appointmentTime,
+          location: this.appointmentForm.location,
+          pricePerHour: this.appointmentForm.pricePerHour,
           remark: this.appointmentForm.remark
         });
         this.$message.success('预约成功');
         this.appointmentDialogVisible = false;
         this.appointmentForm = {
           appointmentTime: '',
+          location: '',
+          pricePerHour: null,
           remark: ''
         };
       } catch (error) {

@@ -19,7 +19,11 @@ public class StudentService {
     public Optional<Student> findByUser(User user) {
         return studentRepository.findByUser(user);
     }
-    
+
+    public Optional<Student> findById(Long id) {
+        return studentRepository.findById(id);
+    }
+
     public Student updateStudent(Student student) {
         return studentRepository.save(student);
     }

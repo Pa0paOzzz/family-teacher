@@ -41,70 +41,120 @@ public class AppointmentController {
             error.put("error", "No token provided");
             return error;
         }
-        
+
         User user = userService.getUserFromToken(token);
         if (user == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "User not found");
             return error;
         }
-        
-        Student student = studentService.findByUser(user).orElse(null);
-        if (student == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Student profile not found");
-            return error;
-        }
-        
-        Long teacherId = ((Number) appointmentData.get("teacherId")).longValue();
-        Teacher teacher = teacherService.findById(teacherId).orElse(null);
-        if (teacher == null) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "Teacher not found");
-            return error;
-        }
-        
+
         AppointmentRequest appointment = new AppointmentRequest();
-        appointment.setStudent(student);
-        appointment.setTeacher(teacher);
-        
+
+        if ("STUDENT".equals(user.getRole())) {
+            Student student = studentService.findByUser(user).orElse(null);
+            if (student == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Student profile not found");
+                return error;
+            }
+
+            Long teacherId = getLongValue(appointmentData.get("teacherId"));
+            if (teacherId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Teacher id is required");
+                return error;
+            }
+
+            Teacher teacher = teacherService.findById(teacherId).orElse(null);
+            if (teacher == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Teacher not found");
+                return error;
+            }
+
+            appointment.setStudent(student);
+            appointment.setTeacher(teacher);
+        } else if ("TEACHER".equals(user.getRole())) {
+            Teacher teacher = teacherService.findByUser(user).orElse(null);
+            if (teacher == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Teacher profile not found");
+                return error;
+            }
+
+            Long studentId = getLongValue(appointmentData.get("studentId"));
+            if (studentId == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Student id is required");
+                return error;
+            }
+
+            Student student = studentService.findById(studentId).orElse(null);
+            if (student == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Student not found");
+                return error;
+            }
+
+            appointment.setStudent(student);
+            appointment.setTeacher(teacher);
+        } else {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Permission denied");
+            return error;
+        }
+
         if (appointmentData.containsKey("appointmentTime")) {
             String appointmentTime = (String) appointmentData.get("appointmentTime");
-            if (appointmentTime != null && appointmentTime.contains(" ")) {
-                String[] timeParts = appointmentTime.split(" ");
-                if (timeParts.length >= 2) {
-                    try {
+            if (appointmentTime != null && !appointmentTime.isEmpty()) {
+                try {
+                    if (appointmentTime.contains("T")) {
                         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-                        appointment.setRequestedDate(dateFormat.parse(timeParts[0]));
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+                        String datePart = appointmentTime.split("T")[0];
+                        appointment.setRequestedDate(dateFormat.parse(datePart));
+
+                        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
+                        String timePart = appointmentTime.split("T")[1].split("\\.")[0];
+                        appointment.setRequestedTime(timeFormat.format(timeFormat.parse(timePart)));
+                    } else if (appointmentTime.contains(" ")) {
+                        String[] timeParts = appointmentTime.split(" ");
+                        if (timeParts.length >= 2) {
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                            appointment.setRequestedDate(dateFormat.parse(timeParts[0]));
+                            appointment.setRequestedTime(timeParts[1]);
+                        }
+                    } else {
+                        appointment.setRequestedTime(appointmentTime);
                     }
-                    appointment.setRequestedTime(timeParts[1]);
+                } catch (ParseException e) {
+                    System.err.println("日期解析失败: " + appointmentTime);
+                    e.printStackTrace();
                 }
             }
         }
-        
+
         if (appointmentData.containsKey("subject")) {
             appointment.setSubject((String) appointmentData.get("subject"));
         }
-        
+
         if (appointmentData.containsKey("location")) {
             appointment.setLocation((String) appointmentData.get("location"));
         }
-        
+
         if (appointmentData.containsKey("pricePerHour")) {
             Object priceObj = appointmentData.get("pricePerHour");
             if (priceObj instanceof Number) {
                 appointment.setPricePerHour(((Number) priceObj).doubleValue());
             }
         }
-        
+
         if (appointmentData.containsKey("remark")) {
             appointment.setNotes((String) appointmentData.get("remark"));
         }
-        
+
         AppointmentRequest savedAppointment = appointmentService.createAppointmentRequest(appointment);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Appointment created successfully");
@@ -379,6 +429,13 @@ public class AppointmentController {
         return response;
     }
     
+    private Long getLongValue(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        return null;
+    }
+
     private String extractToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

@@ -81,7 +81,7 @@
                 </el-table-column>
                 <el-table-column label="操作">
                   <template #default="scope">
-                    <el-button type="primary" size="small">查看详情</el-button>
+                    <el-button type="primary" size="small" @click="openDetailDialog(scope.row)">查看详情</el-button>
                     <el-button type="success" size="small" @click="completeAppointment(scope.row.id)">完成</el-button>
                   </template>
                 </el-table-column>
@@ -124,6 +124,54 @@
             </el-tab-pane>
           </el-tabs>
         </div>
+        
+        <el-dialog v-model="detailDialogVisible" title="预约详情" width="700px">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="预约ID" :span="2">
+              {{ selectedAppointment?.id || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学生姓名" :span="2">
+              {{ selectedAppointment?.studentName || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学校">
+              {{ selectedAppointment?.studentSchool || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="年级">
+              {{ selectedAppointment?.studentGrade || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="联系电话">
+              {{ selectedAppointment?.studentPhone || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              {{ selectedAppointment?.studentEmail || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学科">
+              {{ selectedAppointment?.subject || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="预约日期">
+              {{ selectedAppointment?.requestedDate || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="预约时间">
+              {{ selectedAppointment?.requestedTime || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地点" :span="2">
+              {{ selectedAppointment?.location || '未知' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="价格/小时">
+              ¥{{ selectedAppointment?.pricePerHour || 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :type="getStatusType(selectedAppointment?.status)">{{ selectedAppointment?.status || '未知' }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="备注" :span="2">
+              {{ selectedAppointment?.notes || '无' }}
+            </el-descriptions-item>
+          </el-descriptions>
+          
+          <template #footer>
+            <el-button @click="detailDialogVisible = false">关闭</el-button>
+          </template>
+        </el-dialog>
         
         <el-dialog v-model="evaluateDialogVisible" title="评价学生" width="500px">
           <el-form :model="evaluateForm" label-width="100px">
@@ -178,6 +226,7 @@ export default {
       acceptedAppointments: [],
       completedAppointments: [],
       rejectedAppointments: [],
+      detailDialogVisible: false,
       evaluateDialogVisible: false,
       selectedAppointment: null,
       evaluateForm: {
@@ -277,6 +326,10 @@ export default {
         this.$message.error('完成预约失败');
       }
     },
+    openDetailDialog(appointment) {
+      this.selectedAppointment = appointment;
+      this.detailDialogVisible = true;
+    },
     openEvaluateDialog(appointment) {
       this.selectedAppointment = appointment;
       this.evaluateForm = {
@@ -322,6 +375,20 @@ export default {
       if (this.refreshInterval) {
         clearInterval(this.refreshInterval);
         this.refreshInterval = null;
+      }
+    },
+    getStatusType(status) {
+      switch(status) {
+        case 'PENDING':
+          return 'warning';
+        case 'ACCEPTED':
+          return 'success';
+        case 'COMPLETED':
+          return 'info';
+        case 'REJECTED':
+          return 'danger';
+        default:
+          return '';
       }
     },
     logout() {
