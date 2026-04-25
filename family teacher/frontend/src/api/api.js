@@ -78,6 +78,7 @@ export const appointmentApi = {
   getList: () => api.get('/transactions/appointments'),
   getById: (id) => api.get(`/transactions/appointments/${id}`),
   update: (id, data) => api.put(`/transactions/appointments/${id}`, data),
+  confirmLongTerm: (id) => api.put(`/transactions/appointments/${id}/confirm-long-term`),
   delete: (id) => api.delete(`/transactions/appointments/${id}`)
 };
 

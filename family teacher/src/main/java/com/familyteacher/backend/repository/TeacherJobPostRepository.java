@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface TeacherJobPostRepository extends JpaRepository<TeacherJobPost, Long> {
     List<TeacherJobPost> findByTeacher(Teacher teacher);
+    List<TeacherJobPost> findByTeacherAndActiveTrue(Teacher teacher);
     List<TeacherJobPost> findByActiveTrue();
     List<TeacherJobPost> findBySubjectContainingIgnoreCaseAndActiveTrue(String subject);
 }

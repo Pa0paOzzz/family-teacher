@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface StudentTutoringRequestRepository extends JpaRepository<StudentTutoringRequest, Long> {
     List<StudentTutoringRequest> findByStudent(Student student);
+    List<StudentTutoringRequest> findByStudentAndActiveTrue(Student student);
     List<StudentTutoringRequest> findByActiveTrue();
     List<StudentTutoringRequest> findBySubjectContainingIgnoreCaseAndActiveTrue(String subject);
 }

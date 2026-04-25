@@ -26,7 +26,11 @@ public class AppointmentRequest {
     private String location;
     private Double pricePerHour;
     private Integer durationHours;
-    private String status; // PENDING, ACCEPTED, REJECTED, COMPLETED
+    private String status; // PENDING, ACCEPTED, REJECTED, COMPLETED, LONG_TERM_CONFIRMED
+    private String appointmentType; // TRIAL_INTERVIEW
+    private Boolean studentConfirmedLongTerm;
+    private Boolean teacherConfirmedLongTerm;
+    private Date longTermConfirmedAt;
     private String notes;
     private Date createdAt;
     private Date updatedAt;
@@ -36,6 +40,13 @@ public class AppointmentRequest {
         createdAt = new Date();
         updatedAt = new Date();
         status = "PENDING";
+        appointmentType = "TRIAL_INTERVIEW";
+        if (studentConfirmedLongTerm == null) {
+            studentConfirmedLongTerm = false;
+        }
+        if (teacherConfirmedLongTerm == null) {
+            teacherConfirmedLongTerm = false;
+        }
     }
     
     @PreUpdate

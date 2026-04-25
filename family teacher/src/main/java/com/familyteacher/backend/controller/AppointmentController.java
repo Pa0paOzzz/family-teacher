@@ -153,11 +153,15 @@ public class AppointmentController {
             appointment.setNotes((String) appointmentData.get("remark"));
         }
 
+        appointment.setAppointmentType("TRIAL_INTERVIEW");
+        appointment.setStudentConfirmedLongTerm(false);
+        appointment.setTeacherConfirmedLongTerm(false);
+
         AppointmentRequest savedAppointment = appointmentService.createAppointmentRequest(appointment);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Appointment created successfully");
+        response.put("message", "Trial appointment created successfully");
         response.put("id", savedAppointment.getId());
         return response;
     }
@@ -204,6 +208,10 @@ public class AppointmentController {
             item.put("location", appointment.getLocation());
             item.put("pricePerHour", appointment.getPricePerHour());
             item.put("status", appointment.getStatus());
+            item.put("appointmentType", appointment.getAppointmentType());
+            item.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
+            item.put("teacherConfirmedLongTerm", appointment.getTeacherConfirmedLongTerm());
+            item.put("longTermConfirmedAt", appointment.getLongTermConfirmedAt());
             item.put("notes", appointment.getNotes());
             item.put("createdAt", appointment.getCreatedAt());
             item.put("updatedAt", appointment.getUpdatedAt());
@@ -290,6 +298,10 @@ public class AppointmentController {
         result.put("location", appointment.getLocation());
         result.put("pricePerHour", appointment.getPricePerHour());
         result.put("status", appointment.getStatus());
+        result.put("appointmentType", appointment.getAppointmentType());
+        result.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
+        result.put("teacherConfirmedLongTerm", appointment.getTeacherConfirmedLongTerm());
+        result.put("longTermConfirmedAt", appointment.getLongTermConfirmedAt());
         result.put("notes", appointment.getNotes());
         result.put("createdAt", appointment.getCreatedAt());
         result.put("updatedAt", appointment.getUpdatedAt());
@@ -386,6 +398,27 @@ public class AppointmentController {
         response.put("success", true);
         response.put("message", "Appointment updated successfully");
         return response;
+    }
+
+    @PutMapping("/appointments/{id}/confirm-long-term")
+    public Map<String, Object> confirmLongTerm(@PathVariable Long id, HttpServletRequest request) {
+        String token = extractToken(request);
+        if (token == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "No token provided");
+            return error;
+        }
+
+        User user = userService.getUserFromToken(token);
+        if (user == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "User not found");
+            return error;
+        }
+
+        return appointmentService.confirmLongTermCooperation(id, user);
     }
     
     @DeleteMapping("/appointments/{id}")
