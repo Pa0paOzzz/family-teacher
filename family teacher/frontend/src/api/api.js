@@ -114,6 +114,8 @@ export const favoriteApi = {
 export const adminApi = {
   getUsers: () => api.get('/admin/users'),
   getAppointments: () => api.get('/admin/appointments'),
+  getAppointmentById: (id) => api.get(`/admin/appointments/${id}`),
+  updateAppointment: (id, data) => api.put(`/admin/appointments/${id}`, data),
   getEvaluations: () => api.get('/admin/evaluations'),
   getStatistics: () => api.get('/admin/statistics')
 };

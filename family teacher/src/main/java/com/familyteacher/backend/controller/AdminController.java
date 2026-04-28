@@ -6,9 +6,11 @@ import com.familyteacher.backend.entity.Student;
 import com.familyteacher.backend.entity.AppointmentRequest;
 import com.familyteacher.backend.entity.Order;
 import com.familyteacher.backend.service.AdminService;
+import com.familyteacher.backend.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -16,6 +18,9 @@ import java.util.Map;
 public class AdminController {
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private AppointmentService appointmentService;
     
     // 用户管理
     @GetMapping("/users")
@@ -47,8 +52,41 @@ public class AdminController {
     
     // 预约管理
     @GetMapping("/appointments")
-    public List<AppointmentRequest> getAllAppointments() {
+    public List<Map<String, Object>> getAllAppointments() {
         return adminService.getAllAppointments();
+    }
+
+    @GetMapping("/appointments/{id}")
+    public Map<String, Object> getAppointmentDetail(@PathVariable Long id) {
+        Map<String, Object> detail = adminService.getAppointmentDetail(id);
+        if (detail == null) {
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("success", false);
+            error.put("error", "Appointment not found");
+            return error;
+        }
+        detail.put("success", true);
+        return detail;
+    }
+
+    @PutMapping("/appointments/{id}")
+    public Map<String, Object> updateAppointment(@PathVariable Long id, @RequestBody Map<String, Object> updateData) {
+        String status = updateData.get("status") instanceof String ? (String) updateData.get("status") : null;
+        String notes = updateData.get("notes") instanceof String ? (String) updateData.get("notes") : null;
+
+        AppointmentRequest appointment = appointmentService.adminUpdateAppointment(id, status, notes);
+        Map<String, Object> response = new LinkedHashMap<>();
+        if (appointment == null) {
+            response.put("success", false);
+            response.put("error", "Failed to update appointment");
+            return response;
+        }
+
+        response.put("success", true);
+        response.put("message", "Appointment updated successfully");
+        response.put("status", appointment.getStatus());
+        response.put("notes", appointment.getNotes());
+        return response;
     }
 
     // 评价管理

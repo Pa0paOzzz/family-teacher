@@ -8,7 +8,9 @@ import com.familyteacher.backend.repository.EvaluationRepository;
 import com.familyteacher.backend.repository.TeacherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class EvaluationService {
@@ -38,7 +40,11 @@ public class EvaluationService {
     public List<Evaluation> getEvaluationsByEvaluator(User evaluator) {
         return evaluationRepository.findByEvaluator(evaluator);
     }
-    
+
+    public Optional<Evaluation> getEvaluationByAppointmentAndEvaluator(AppointmentRequest appointment, User evaluator) {
+        return evaluationRepository.findByAppointmentAndEvaluator(appointment, evaluator);
+    }
+
     // 更新家教的评分
     private void updateTeacherRating(User user) {
         if (user != null && "TEACHER".equals(user.getRole())) {

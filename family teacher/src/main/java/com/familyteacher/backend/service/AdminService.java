@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.text.SimpleDateFormat;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,8 +59,25 @@ public class AdminService {
     }
 
     // 获取所有预约请求
-    public List<AppointmentRequest> getAllAppointments() {
-        return appointmentRequestRepository.findAll();
+    public List<Map<String, Object>> getAllAppointments() {
+        return appointmentRequestRepository.findAll().stream()
+                .sorted(Comparator.comparing(
+                        AppointmentRequest::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ).thenComparing(
+                        AppointmentRequest::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .map(this::buildAppointmentSummary)
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getAppointmentDetail(Long id) {
+        AppointmentRequest appointment = appointmentRequestRepository.findById(id).orElse(null);
+        if (appointment == null) {
+            return null;
+        }
+        return buildAppointmentSummary(appointment);
     }
 
     // 获取所有订单
@@ -143,5 +161,74 @@ public class AdminService {
         item.put("createdAt", evaluation.getCreatedAt());
         return item;
     }
-}
 
+    private Map<String, Object> buildAppointmentSummary(AppointmentRequest appointment) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", appointment.getId());
+        item.put("subject", appointment.getSubject());
+        item.put("requestedDate", appointment.getRequestedDate() != null ? dateFormat.format(appointment.getRequestedDate()) : "");
+        item.put("requestedTime", appointment.getRequestedTime());
+        item.put("location", appointment.getLocation());
+        item.put("pricePerHour", appointment.getPricePerHour());
+        item.put("durationHours", appointment.getDurationHours());
+        item.put("status", appointment.getStatus());
+        item.put("appointmentType", appointment.getAppointmentType());
+        item.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
+        item.put("teacherConfirmedLongTerm", appointment.getTeacherConfirmedLongTerm());
+        item.put("studentConfirmedLongTermCompletion", appointment.getStudentConfirmedLongTermCompletion());
+        item.put("teacherConfirmedLongTermCompletion", appointment.getTeacherConfirmedLongTermCompletion());
+        item.put("longTermConfirmedAt", appointment.getLongTermConfirmedAt());
+        item.put("longTermCompletedAt", appointment.getLongTermCompletedAt());
+        item.put("notes", appointment.getNotes());
+        item.put("createdAt", appointment.getCreatedAt());
+        item.put("updatedAt", appointment.getUpdatedAt());
+
+        if (appointment.getTeacher() != null && appointment.getTeacher().getUser() != null) {
+            item.put("teacherName", appointment.getTeacher().getUser().getName());
+            item.put("teacherId", appointment.getTeacher().getId());
+            item.put("teacherUserId", appointment.getTeacher().getUser().getId());
+            item.put("teacherPhone", defaultText(appointment.getTeacher().getUser().getPhone()));
+            item.put("teacherEmail", defaultText(appointment.getTeacher().getUser().getEmail()));
+            item.put("teacherSchool", defaultText(appointment.getTeacher().getSchool()));
+            item.put("teacherMajor", defaultText(appointment.getTeacher().getMajor()));
+        } else {
+            item.put("teacherName", "未知");
+            item.put("teacherId", 0);
+            item.put("teacherUserId", 0);
+            item.put("teacherPhone", "未知");
+            item.put("teacherEmail", "未知");
+            item.put("teacherSchool", "未知");
+            item.put("teacherMajor", "未知");
+        }
+
+        if (appointment.getStudent() != null && appointment.getStudent().getUser() != null) {
+            item.put("studentName", appointment.getStudent().getUser().getName());
+            item.put("studentId", appointment.getStudent().getId());
+            item.put("studentUserId", appointment.getStudent().getUser().getId());
+            item.put("studentPhone", defaultText(appointment.getStudent().getUser().getPhone()));
+            item.put("studentEmail", defaultText(appointment.getStudent().getUser().getEmail()));
+            item.put("studentSchool", defaultText(appointment.getStudent().getSchool()));
+            item.put("studentGrade", defaultText(appointment.getStudent().getGrade()));
+            item.put("studentMajor", defaultText(appointment.getStudent().getMajor()));
+            item.put("studentAddress", defaultText(appointment.getStudent().getAddressFormatted()));
+        } else {
+            item.put("studentName", "未知");
+            item.put("studentId", 0);
+            item.put("studentUserId", 0);
+            item.put("studentPhone", "未知");
+            item.put("studentEmail", "未知");
+            item.put("studentSchool", "未知");
+            item.put("studentGrade", "未知");
+            item.put("studentMajor", "未知");
+            item.put("studentAddress", "未知");
+        }
+
+        return item;
+    }
+
+    private String defaultText(String value) {
+        return value == null || value.isBlank() ? "未填写" : value;
+    }
+}

@@ -26,11 +26,14 @@ public class AppointmentRequest {
     private String location;
     private Double pricePerHour;
     private Integer durationHours;
-    private String status; // PENDING, ACCEPTED, REJECTED, COMPLETED, LONG_TERM_CONFIRMED
+    private String status; // PENDING, ACCEPTED, REJECTED, COMPLETED, LONG_TERM_CONFIRMED, LONG_TERM_REJECTED, LONG_TERM_COMPLETED
     private String appointmentType; // TRIAL_INTERVIEW
     private Boolean studentConfirmedLongTerm;
     private Boolean teacherConfirmedLongTerm;
     private Date longTermConfirmedAt;
+    private Boolean studentConfirmedLongTermCompletion;
+    private Boolean teacherConfirmedLongTermCompletion;
+    private Date longTermCompletedAt;
     private String notes;
     private Date createdAt;
     private Date updatedAt;
@@ -46,6 +49,12 @@ public class AppointmentRequest {
         }
         if (teacherConfirmedLongTerm == null) {
             teacherConfirmedLongTerm = false;
+        }
+        if (studentConfirmedLongTermCompletion == null) {
+            studentConfirmedLongTermCompletion = false;
+        }
+        if (teacherConfirmedLongTermCompletion == null) {
+            teacherConfirmedLongTermCompletion = false;
         }
     }
     

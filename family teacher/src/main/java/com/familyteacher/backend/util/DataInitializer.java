@@ -122,8 +122,12 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest2 = ensureAppointment(
                 student2, teacher2, "英语", "上海市浦东新区", 180.0,
-                parseDate("2026-04-19"), "周六下午 14:00", 2, "想重点练习口语表达和托福面试", "COMPLETED"
+                parseDate("2026-04-19"), "周六下午 14:00", 2, "想重点练习口语表达和托福面试", "LONG_TERM_COMPLETED"
         );
+        appointmentRequest2.setStudentConfirmedLongTerm(true);
+        appointmentRequest2.setTeacherConfirmedLongTerm(true);
+        appointmentRequest2.setLongTermConfirmedAt(parseDate("2026-04-20"));
+        appointmentRequestRepository.save(appointmentRequest2);
         ensureOrder(appointmentRequest2, 360.0, "PAID");
         ensureEvaluation(
                 appointmentRequest2,
@@ -297,8 +301,12 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest8 = ensureAppointment(
                 student8, teacher8, "英语", "北京市朝阳区", 190.0,
-                parseDate("2026-04-20"), "周日白天", 2, "想加强面试中的英语表达和听力反应", "COMPLETED"
+                parseDate("2026-04-20"), "周日白天", 2, "想加强面试中的英语表达和听力反应", "LONG_TERM_COMPLETED"
         );
+        appointmentRequest8.setStudentConfirmedLongTerm(true);
+        appointmentRequest8.setTeacherConfirmedLongTerm(true);
+        appointmentRequest8.setLongTermConfirmedAt(parseDate("2026-04-21"));
+        appointmentRequestRepository.save(appointmentRequest8);
         ensureOrder(appointmentRequest8, 380.0, "REFUNDED");
         ensureEvaluation(
                 appointmentRequest8,
@@ -323,8 +331,12 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest9 = ensureAppointment(
                 student9, teacher3, "物理", "杭州市滨江区", 200.0,
-                parseDate("2026-04-13"), "周日下午 15:00", 3, "想先试上一节竞赛提高课", "COMPLETED"
+                parseDate("2026-04-13"), "周日下午 15:00", 3, "想先试上一节竞赛提高课", "LONG_TERM_COMPLETED"
         );
+        appointmentRequest9.setStudentConfirmedLongTerm(true);
+        appointmentRequest9.setTeacherConfirmedLongTerm(true);
+        appointmentRequest9.setLongTermConfirmedAt(parseDate("2026-04-14"));
+        appointmentRequestRepository.save(appointmentRequest9);
         ensureOrder(appointmentRequest9, 600.0, "PAID");
         ensureEvaluation(
                 appointmentRequest9,
@@ -543,6 +555,20 @@ public class DataInitializer implements CommandLineRunner {
         appointmentRequest.setDurationHours(durationHours);
         appointmentRequest.setNotes(notes);
         appointmentRequest.setStatus(status);
+        appointmentRequest.setStudentConfirmedLongTerm("LONG_TERM_CONFIRMED".equals(status) || "LONG_TERM_COMPLETED".equals(status));
+        appointmentRequest.setTeacherConfirmedLongTerm("LONG_TERM_CONFIRMED".equals(status) || "LONG_TERM_COMPLETED".equals(status));
+        appointmentRequest.setStudentConfirmedLongTermCompletion("LONG_TERM_COMPLETED".equals(status));
+        appointmentRequest.setTeacherConfirmedLongTermCompletion("LONG_TERM_COMPLETED".equals(status));
+        if ("LONG_TERM_CONFIRMED".equals(status) || "LONG_TERM_COMPLETED".equals(status)) {
+            appointmentRequest.setLongTermConfirmedAt(requestedDate);
+        } else {
+            appointmentRequest.setLongTermConfirmedAt(null);
+        }
+        if ("LONG_TERM_COMPLETED".equals(status)) {
+            appointmentRequest.setLongTermCompletedAt(requestedDate);
+        } else {
+            appointmentRequest.setLongTermCompletedAt(null);
+        }
         return appointmentRequestRepository.save(appointmentRequest);
     }
 

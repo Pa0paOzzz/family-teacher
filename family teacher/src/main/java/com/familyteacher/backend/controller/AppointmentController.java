@@ -38,14 +38,16 @@ public class AppointmentController {
         String token = extractToken(request);
         if (token == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "No token provided");
+            error.put("success", false);
+            error.put("error", "请先登录");
             return error;
         }
 
         User user = userService.getUserFromToken(token);
         if (user == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "User not found");
+            error.put("success", false);
+            error.put("error", "用户不存在");
             return error;
         }
 
@@ -101,7 +103,7 @@ public class AppointmentController {
             appointment.setTeacher(teacher);
         } else {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Permission denied");
+            error.put("error", "无权操作");
             return error;
         }
 
@@ -211,7 +213,10 @@ public class AppointmentController {
             item.put("appointmentType", appointment.getAppointmentType());
             item.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
             item.put("teacherConfirmedLongTerm", appointment.getTeacherConfirmedLongTerm());
+            item.put("studentConfirmedLongTermCompletion", appointment.getStudentConfirmedLongTermCompletion());
+            item.put("teacherConfirmedLongTermCompletion", appointment.getTeacherConfirmedLongTermCompletion());
             item.put("longTermConfirmedAt", appointment.getLongTermConfirmedAt());
+            item.put("longTermCompletedAt", appointment.getLongTermCompletedAt());
             item.put("notes", appointment.getNotes());
             item.put("createdAt", appointment.getCreatedAt());
             item.put("updatedAt", appointment.getUpdatedAt());
@@ -301,7 +306,10 @@ public class AppointmentController {
         result.put("appointmentType", appointment.getAppointmentType());
         result.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
         result.put("teacherConfirmedLongTerm", appointment.getTeacherConfirmedLongTerm());
+        result.put("studentConfirmedLongTermCompletion", appointment.getStudentConfirmedLongTermCompletion());
+        result.put("teacherConfirmedLongTermCompletion", appointment.getTeacherConfirmedLongTermCompletion());
         result.put("longTermConfirmedAt", appointment.getLongTermConfirmedAt());
+        result.put("longTermCompletedAt", appointment.getLongTermCompletedAt());
         result.put("notes", appointment.getNotes());
         result.put("createdAt", appointment.getCreatedAt());
         result.put("updatedAt", appointment.getUpdatedAt());
@@ -354,49 +362,69 @@ public class AppointmentController {
         String token = extractToken(request);
         if (token == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "No token provided");
+            error.put("success", false);
+            error.put("error", "请先登录");
             return error;
         }
         
         User user = userService.getUserFromToken(token);
         if (user == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "User not found");
+            error.put("success", false);
+            error.put("error", "用户不存在");
             return error;
         }
         
         AppointmentRequest appointment = appointmentService.getAppointmentById(id);
         if (appointment == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Appointment not found");
+            error.put("success", false);
+            error.put("error", "预约记录不存在");
             return error;
         }
         
-        if ("TEACHER".equals(user.getRole())) {
-            if (!appointment.getTeacher().getUser().getId().equals(user.getId())) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "Permission denied");
-                return error;
-            }
-        } else {
+        boolean isStudent = appointment.getStudent() != null
+                && appointment.getStudent().getUser() != null
+                && appointment.getStudent().getUser().getId().equals(user.getId());
+        boolean isTeacher = appointment.getTeacher() != null
+                && appointment.getTeacher().getUser() != null
+                && appointment.getTeacher().getUser().getId().equals(user.getId());
+        if (!isStudent && !isTeacher) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Permission denied");
+            error.put("success", false);
+            error.put("error", "无权操作该预约");
             return error;
         }
         
-        if (updateData.containsKey("status")) {
-            appointment.setStatus((String) updateData.get("status"));
+        String targetStatus = updateData.containsKey("status") ? (String) updateData.get("status") : appointment.getStatus();
+
+        AppointmentRequest updatedAppointment = appointmentService.updateAppointmentStatus(id, targetStatus, user);
+        if (updatedAppointment == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "当前状态不能执行该操作");
+            return error;
         }
-        
+
         if (updateData.containsKey("notes")) {
-            appointment.setNotes((String) updateData.get("notes"));
+            updatedAppointment.setNotes((String) updateData.get("notes"));
         }
-        
-        appointmentService.updateAppointmentStatus(id, appointment.getStatus());
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Appointment updated successfully");
+        boolean requestedLongTermCompletion = "LONG_TERM_COMPLETED".equals(targetStatus);
+        boolean requestedLongTermRejection = "LONG_TERM_REJECTED".equals(targetStatus);
+        boolean longTermCompleted = "LONG_TERM_COMPLETED".equals(updatedAppointment.getStatus());
+        response.put("message", longTermCompleted
+                ? "长期授课已完成"
+                : requestedLongTermCompletion
+                    ? "已记录长期授课完成确认，等待对方确认"
+                    : requestedLongTermRejection
+                        ? "已拒绝长期合作"
+                        : "预约状态已更新");
+        response.put("status", updatedAppointment.getStatus());
+        response.put("studentConfirmedLongTermCompletion", updatedAppointment.getStudentConfirmedLongTermCompletion());
+        response.put("teacherConfirmedLongTermCompletion", updatedAppointment.getTeacherConfirmedLongTermCompletion());
         return response;
     }
 
@@ -406,7 +434,7 @@ public class AppointmentController {
         if (token == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("error", "No token provided");
+            error.put("error", "请先登录");
             return error;
         }
 
@@ -414,7 +442,7 @@ public class AppointmentController {
         if (user == null) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("error", "User not found");
+            error.put("error", "用户不存在");
             return error;
         }
 
@@ -426,33 +454,33 @@ public class AppointmentController {
         String token = extractToken(request);
         if (token == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "No token provided");
+            error.put("error", "请先登录");
             return error;
         }
         
         User user = userService.getUserFromToken(token);
         if (user == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "User not found");
+            error.put("error", "用户不存在");
             return error;
         }
         
         AppointmentRequest appointment = appointmentService.getAppointmentById(id);
         if (appointment == null) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Appointment not found");
+            error.put("error", "预约记录不存在");
             return error;
         }
         
         if ("STUDENT".equals(user.getRole())) {
             if (!appointment.getStudent().getUser().getId().equals(user.getId())) {
                 Map<String, Object> error = new HashMap<>();
-                error.put("error", "Permission denied");
+                error.put("error", "无权操作该预约");
                 return error;
             }
         } else {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "Permission denied");
+            error.put("error", "无权操作该预约");
             return error;
         }
         

@@ -99,6 +99,7 @@
                     <div class="price-row">
                       <span class="price">¥{{ jobPost.pricePerHour }}/小时</span>
                       <div class="action-buttons">
+                        <el-button type="info" size="small" plain @click="openDetailDialog(jobPost)">详情</el-button>
                         <el-button
                           :type="isFavorited(jobPost.id) ? 'warning' : 'default'"
                           size="small"
@@ -150,6 +151,52 @@
             <el-button type="primary" @click="submitAppointment">确认预约</el-button>
           </template>
         </el-dialog>
+
+        <el-dialog v-model="detailDialogVisible" title="求职详情" width="720px">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="求职标题" :span="2">
+              {{ selectedDetailJobPost?.title || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="教师姓名">
+              {{ selectedDetailJobPost?.teacher?.user?.name || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学科">
+              {{ selectedDetailJobPost?.subject || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="学校">
+              {{ selectedDetailJobPost?.teacher?.school || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="专业">
+              {{ selectedDetailJobPost?.teacher?.major || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="电话">
+              {{ selectedDetailJobPost?.teacher?.user?.phone || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="邮箱">
+              {{ selectedDetailJobPost?.teacher?.user?.email || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="授课地点" :span="2">
+              {{ getLocationText(selectedDetailJobPost) || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="可授课时间" :span="2">
+              {{ selectedDetailJobPost?.availability || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="价格/小时">
+              ¥{{ selectedDetailJobPost?.pricePerHour || 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="教师简介">
+              {{ selectedDetailJobPost?.teacher?.bio || '未填写' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="求职描述" :span="2">
+              <div class="detail-text">{{ selectedDetailJobPost?.description || '暂无描述' }}</div>
+            </el-descriptions-item>
+          </el-descriptions>
+
+          <template #footer>
+            <el-button @click="detailDialogVisible = false">关闭</el-button>
+            <el-button type="primary" @click="openAppointmentFromDetail">立即预约</el-button>
+          </template>
+        </el-dialog>
       </el-main>
     </el-container>
   </div>
@@ -182,7 +229,9 @@ export default {
       favoriteIds: [],
       favoriteLoadingIds: [],
       appointmentDialogVisible: false,
+      detailDialogVisible: false,
       selectedJobPost: null,
+      selectedDetailJobPost: null,
       emptyDescription: '暂无教师推荐',
       appointmentForm: {
         appointmentTime: '',
@@ -296,6 +345,17 @@ export default {
     openAppointmentDialog(jobPost) {
       this.selectedJobPost = jobPost;
       this.appointmentDialogVisible = true;
+    },
+    openDetailDialog(jobPost) {
+      this.selectedDetailJobPost = jobPost;
+      this.detailDialogVisible = true;
+    },
+    openAppointmentFromDetail() {
+      if (!this.selectedDetailJobPost) {
+        return;
+      }
+      this.detailDialogVisible = false;
+      this.openAppointmentDialog(this.selectedDetailJobPost);
     },
     async submitAppointment() {
       if (!this.appointmentForm.appointmentTime) {
@@ -490,6 +550,12 @@ export default {
 
 .action-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.detail-text {
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 </style>

@@ -53,9 +53,9 @@
                 <el-table-column prop="requestedTime" label="时间"></el-table-column>
                 <el-table-column prop="location" label="地点"></el-table-column>
                 <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
-                <el-table-column label="状态">
+                <el-table-column label="状态" min-width="120">
                   <template #default="scope">
-                    <el-tag type="warning">{{ scope.row.status }}</el-tag>
+                    <el-tag class="status-tag" type="warning">{{ getStatusText(scope.row.status) }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作">
@@ -74,9 +74,9 @@
                 <el-table-column prop="requestedTime" label="时间"></el-table-column>
                 <el-table-column prop="location" label="地点"></el-table-column>
                 <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
-                <el-table-column label="状态">
+                <el-table-column label="状态" min-width="120">
                   <template #default="scope">
-                    <el-tag type="success">{{ scope.row.status }}</el-tag>
+                    <el-tag class="status-tag" type="success">{{ getStatusText(scope.row.status) }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作">
@@ -94,15 +94,16 @@
                 <el-table-column prop="requestedTime" label="时间"></el-table-column>
                 <el-table-column prop="location" label="地点"></el-table-column>
                 <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
-                <el-table-column label="长期进度">
+                <el-table-column label="长期进度" min-width="220">
                   <template #default="scope">
-                    <el-tag :type="getLongTermTagType(scope.row)">{{ getLongTermStatusText(scope.row) }}</el-tag>
+                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(scope.row)">{{ getLongTermStatusText(scope.row) }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" min-width="280">
+                <el-table-column label="操作" min-width="360">
                   <template #default="scope">
                     <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
                     <el-button
+                      v-if="scope.row.canEvaluate || scope.row.hasEvaluated"
                       type="warning"
                       size="small"
                       @click="openEvaluateDialog(scope.row)"
@@ -118,6 +119,14 @@
                     >
                       {{ scope.row.studentConfirmedLongTerm ? '已确认长期合作' : '确认长期合作' }}
                     </el-button>
+                    <el-button
+                      v-if="canRejectLongTerm(scope.row)"
+                      type="danger"
+                      size="small"
+                      @click="rejectLongTerm(scope.row)"
+                    >
+                      拒绝长期合作
+                    </el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -129,14 +138,31 @@
                 <el-table-column prop="requestedDate" label="试课日期"></el-table-column>
                 <el-table-column prop="requestedTime" label="试课时间"></el-table-column>
                 <el-table-column prop="location" label="地点"></el-table-column>
-                <el-table-column label="合作状态">
+                <el-table-column label="合作状态" min-width="220">
                   <template #default="scope">
-                    <el-tag type="success">{{ getLongTermStatusText(scope.row) }}</el-tag>
+                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(scope.row)">{{ getLongTermStatusText(scope.row) }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" min-width="220">
                   <template #default="scope">
                     <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
+                    <el-button
+                      v-if="scope.row.status === 'LONG_TERM_CONFIRMED' && !scope.row.studentConfirmedLongTermCompletion"
+                      type="primary"
+                      size="small"
+                      @click="completeLongTermAppointment(scope.row.id)"
+                    >
+                      确认完成长期授课
+                    </el-button>
+                    <el-button
+                      v-if="scope.row.canEvaluate || scope.row.hasEvaluated"
+                      type="warning"
+                      size="small"
+                      @click="openEvaluateDialog(scope.row)"
+                      :disabled="scope.row.hasEvaluated"
+                    >
+                      {{ scope.row.hasEvaluated ? '已评价' : '评价老师' }}
+                    </el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -149,9 +175,9 @@
                 <el-table-column prop="requestedTime" label="时间"></el-table-column>
                 <el-table-column prop="location" label="地点"></el-table-column>
                 <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
-                <el-table-column label="状态">
+                <el-table-column label="状态" min-width="160">
                   <template #default="scope">
-                    <el-tag type="danger">{{ scope.row.status }}</el-tag>
+                    <el-tag class="status-tag" type="danger">{{ getStatusText(scope.row.status) }}</el-tag>
                   </template>
                 </el-table-column>
               </el-table>
@@ -198,7 +224,7 @@
               {{ selectedAppointment?.pricePerHour || 0 }}
             </el-descriptions-item>
             <el-descriptions-item label="状态">
-              <el-tag :type="getStatusType(selectedAppointment?.status)">{{ selectedAppointment?.status || '未知' }}</el-tag>
+              <el-tag class="status-tag" :type="getStatusType(selectedAppointment?.status)">{{ getStatusText(selectedAppointment?.status) }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="长期合作进度" :span="2">
               {{ getLongTermStatusText(selectedAppointment) }}
@@ -287,6 +313,12 @@ export default {
     this.stopAutoRefresh();
   },
   methods: {
+    assertApiSuccess(response) {
+      if (response && (response.success === false || response.error)) {
+        throw new Error(response.error || '操作失败');
+      }
+      return response;
+    },
     handleMenuSelect(index) {
       switch (index) {
         case '1':
@@ -317,22 +349,25 @@ export default {
         const response = await appointmentApi.getList();
         const appointments = response || [];
         for (const app of appointments) {
-          if (app.status === 'COMPLETED' || app.status === 'LONG_TERM_CONFIRMED') {
+          if (app.status === 'COMPLETED' || app.status === 'LONG_TERM_CONFIRMED' || app.status === 'LONG_TERM_COMPLETED') {
             try {
               const checkResult = await evaluationApi.check(app.id);
               app.hasEvaluated = checkResult.hasEvaluated;
+              app.canEvaluate = checkResult.canEvaluate;
             } catch {
               app.hasEvaluated = false;
+              app.canEvaluate = false;
             }
           } else {
             app.hasEvaluated = false;
+            app.canEvaluate = false;
           }
         }
         this.pendingAppointments = appointments.filter(app => app.status === 'PENDING');
         this.acceptedAppointments = appointments.filter(app => app.status === 'ACCEPTED');
         this.completedAppointments = appointments.filter(app => app.status === 'COMPLETED');
-        this.longTermAppointments = appointments.filter(app => app.status === 'LONG_TERM_CONFIRMED');
-        this.rejectedAppointments = appointments.filter(app => app.status === 'REJECTED');
+        this.longTermAppointments = appointments.filter(app => app.status === 'LONG_TERM_CONFIRMED' || app.status === 'LONG_TERM_COMPLETED');
+        this.rejectedAppointments = appointments.filter(app => app.status === 'REJECTED' || app.status === 'LONG_TERM_REJECTED');
       } catch (error) {
         console.error('加载试课列表失败:', error);
         this.$message.error('加载试课列表失败');
@@ -365,12 +400,30 @@ export default {
     canConfirmLongTerm(appointment) {
       return appointment?.status === 'COMPLETED' && !appointment?.studentConfirmedLongTerm;
     },
+    canRejectLongTerm(appointment) {
+      return appointment?.status === 'COMPLETED';
+    },
     getLongTermStatusText(appointment) {
       if (!appointment) {
         return '待确认';
       }
+      if (appointment.status === 'LONG_TERM_REJECTED') {
+        return '已拒绝长期合作';
+      }
+      if (appointment.status === 'LONG_TERM_COMPLETED') {
+        return appointment.hasEvaluated ? '长期授课已完成，已评价' : '长期授课已完成，待评价';
+      }
       if (appointment.status === 'LONG_TERM_CONFIRMED') {
-        return '双方已确认，已转为长期授课';
+        if (appointment.studentConfirmedLongTermCompletion && appointment.teacherConfirmedLongTermCompletion) {
+          return '双方已确认完成长期授课';
+        }
+        if (appointment.studentConfirmedLongTermCompletion) {
+          return '你已确认完成，等待老师确认';
+        }
+        if (appointment.teacherConfirmedLongTermCompletion) {
+          return '老师已确认完成，等待你确认';
+        }
+        return '长期授课进行中';
       }
       if (appointment.studentConfirmedLongTerm && appointment.teacherConfirmedLongTerm) {
         return '双方已确认';
@@ -384,8 +437,14 @@ export default {
       return '试课已结束，待双方确认';
     },
     getLongTermTagType(appointment) {
+      if (appointment?.status === 'LONG_TERM_COMPLETED') {
+        return appointment?.hasEvaluated ? 'success' : 'warning';
+      }
+      if (appointment?.status === 'LONG_TERM_REJECTED') {
+        return 'danger';
+      }
       if (appointment?.status === 'LONG_TERM_CONFIRMED') {
-        return 'success';
+        return appointment?.studentConfirmedLongTermCompletion || appointment?.teacherConfirmedLongTermCompletion ? 'warning' : 'success';
       }
       if (appointment?.studentConfirmedLongTerm || appointment?.teacherConfirmedLongTerm) {
         return 'warning';
@@ -394,12 +453,32 @@ export default {
     },
     async confirmLongTerm(appointment) {
       try {
-        const response = await appointmentApi.confirmLongTerm(appointment.id);
-        this.$message.success(response.message || '已记录长期合作意向');
+        const response = this.assertApiSuccess(await appointmentApi.confirmLongTerm(appointment.id));
+        this.$message.success(response.message || '操作成功');
         this.loadAppointments();
       } catch (error) {
         console.error('确认长期合作失败:', error);
         this.$message.error('确认长期合作失败: ' + (error.response?.data?.error || error.message));
+      }
+    },
+    async completeLongTermAppointment(id) {
+      try {
+        const response = this.assertApiSuccess(await appointmentApi.update(id, { status: 'LONG_TERM_COMPLETED' }));
+        this.$message.success(response.message || '操作成功');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('完成长期授课失败:', error);
+        this.$message.error('完成长期授课失败: ' + (error.response?.data?.error || error.message));
+      }
+    },
+    async rejectLongTerm(appointment) {
+      try {
+        const response = this.assertApiSuccess(await appointmentApi.update(appointment.id, { status: 'LONG_TERM_REJECTED' }));
+        this.$message.success(response.message || '已拒绝长期合作');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('拒绝长期合作失败:', error);
+        this.$message.error('拒绝长期合作失败: ' + (error.response?.data?.error || error.message));
       }
     },
     async submitEvaluation() {
@@ -438,10 +517,33 @@ export default {
           return 'info';
         case 'LONG_TERM_CONFIRMED':
           return 'success';
+        case 'LONG_TERM_COMPLETED':
+          return 'warning';
+        case 'LONG_TERM_REJECTED':
         case 'REJECTED':
           return 'danger';
         default:
           return '';
+      }
+    },
+    getStatusText(status) {
+      switch (status) {
+        case 'PENDING':
+          return '待处理';
+        case 'ACCEPTED':
+          return '已接受';
+        case 'COMPLETED':
+          return '试课已完成';
+        case 'REJECTED':
+          return '试课已拒绝';
+        case 'LONG_TERM_CONFIRMED':
+          return '已确认长期合作';
+        case 'LONG_TERM_COMPLETED':
+          return '长期授课已完成';
+        case 'LONG_TERM_REJECTED':
+          return '已拒绝长期合作';
+        default:
+          return status || '未知';
       }
     },
     startAutoRefresh() {
@@ -535,5 +637,18 @@ export default {
 .appointments-container h2 {
   margin-bottom: 30px;
   color: #409EFF;
+}
+
+:deep(.status-tag.el-tag) {
+  height: auto;
+  min-height: 24px;
+  padding: 4px 8px;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+:deep(.long-term-status.el-tag) {
+  min-width: 160px;
+  justify-content: center;
 }
 </style>
