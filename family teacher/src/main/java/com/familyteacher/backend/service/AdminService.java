@@ -13,7 +13,10 @@ import com.familyteacher.backend.repository.AppointmentRequestRepository;
 import com.familyteacher.backend.repository.OrderRepository;
 import com.familyteacher.backend.repository.EvaluationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -43,9 +46,22 @@ public class AdminService {
     @Autowired
     private EvaluationRepository evaluationRepository;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     // 获取所有用户
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<Map<String, Object>> getAllUsers() {
+        return userRepository.findAll().stream()
+                .filter(user -> !Boolean.TRUE.equals(user.getDeleted()))
+                .sorted(Comparator.comparing(
+                        User::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ).thenComparing(
+                        User::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .map(this::buildUserSummary)
+                .collect(Collectors.toList());
     }
 
     // 获取所有家教老师
@@ -99,25 +115,162 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
+    public Map<String, Object> deleteEvaluation(Long evaluationId) {
+        Evaluation evaluation = evaluationRepository.findById(evaluationId).orElse(null);
+        if (evaluation == null) {
+            return errorResponse("评价不存在");
+        }
+
+        User evaluated = evaluation.getEvaluated();
+        evaluationRepository.delete(evaluation);
+        refreshTeacherRating(evaluated);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("success", true);
+        response.put("message", "评价已删除");
+        return response;
+    }
+
     // 删除用户
-    public void deleteUser(Long userId) {
-        userRepository.deleteById(userId);
+    public Map<String, Object> deleteUser(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return errorResponse("用户不存在");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            return errorResponse("管理员账号不能删除");
+        }
+
+        user.setEnabled(false);
+        user.setDeleted(true);
+        userRepository.save(user);
+        return successUserResponse("用户已删除", user);
     }
 
     // 禁用用户
-    public User disableUser(Long userId) {
+    public Map<String, Object> disableUser(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
-        if (user != null) {
-            userRepository.save(user);
+        if (user == null) {
+            return errorResponse("用户不存在");
         }
-        return user;
+        if (Boolean.TRUE.equals(user.getDeleted())) {
+            return errorResponse("用户已删除");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            return errorResponse("管理员账号不能禁用");
+        }
+        user.setEnabled(false);
+        userRepository.save(user);
+        return successUserResponse("用户已禁用", user);
+    }
+
+    public Map<String, Object> enableUser(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return errorResponse("用户不存在");
+        }
+        if (Boolean.TRUE.equals(user.getDeleted())) {
+            return errorResponse("用户已删除");
+        }
+        user.setEnabled(true);
+        userRepository.save(user);
+        return successUserResponse("用户已启用", user);
+    }
+
+    @Transactional
+    public Map<String, Object> createUser(Map<String, Object> userData) {
+        String username = getString(userData, "username");
+        String password = getString(userData, "password");
+        String role = normalizeRole(getString(userData, "role"));
+
+        if (!StringUtils.hasText(username) || !StringUtils.hasText(password) || !StringUtils.hasText(role)) {
+            return errorResponse("用户名、密码和角色不能为空");
+        }
+        if (userRepository.findByUsername(username).isPresent()) {
+            return errorResponse("用户名已存在");
+        }
+
+        String email = getString(userData, "email");
+        if (StringUtils.hasText(email) && userRepository.findByEmail(email).isPresent()) {
+            return errorResponse("邮箱已存在");
+        }
+
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(role);
+        user.setName(getString(userData, "name"));
+        user.setEmail(email);
+        user.setPhone(getString(userData, "phone"));
+        user.setEnabled("ADMIN".equals(role) || getBoolean(userData, "enabled", true));
+        userRepository.save(user);
+
+        return successUserResponse("用户已创建", user);
+    }
+
+    @Transactional
+    public Map<String, Object> updateUser(Long userId, Map<String, Object> userData) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return errorResponse("用户不存在");
+        }
+        if (Boolean.TRUE.equals(user.getDeleted())) {
+            return errorResponse("用户已删除");
+        }
+
+        String username = getString(userData, "username");
+        if (StringUtils.hasText(username) && !username.equals(user.getUsername())) {
+            if (userRepository.findByUsername(username).isPresent()) {
+                return errorResponse("用户名已存在");
+            }
+            user.setUsername(username);
+        }
+
+        String email = getString(userData, "email");
+        if (StringUtils.hasText(email) && !email.equals(user.getEmail())) {
+            if (userRepository.findByEmail(email).isPresent()) {
+                return errorResponse("邮箱已存在");
+            }
+            user.setEmail(email);
+        } else if (userData.containsKey("email")) {
+            user.setEmail(email);
+        }
+
+        if (userData.containsKey("name")) {
+            user.setName(getString(userData, "name"));
+        }
+        if (userData.containsKey("phone")) {
+            user.setPhone(getString(userData, "phone"));
+        }
+        if (userData.containsKey("role")) {
+            String role = normalizeRole(getString(userData, "role"));
+            if (!StringUtils.hasText(role)) {
+                return errorResponse("角色不合法");
+            }
+            user.setRole(role);
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            user.setEnabled(true);
+        }
+        if (userData.containsKey("enabled") && !"ADMIN".equals(user.getRole())) {
+            user.setEnabled(getBoolean(userData, "enabled", true));
+        }
+        String password = getString(userData, "password");
+        if (StringUtils.hasText(password)) {
+            user.setPassword(passwordEncoder.encode(password));
+        }
+
+        userRepository.save(user);
+        return successUserResponse("用户已更新", user);
     }
 
     // 获取数据统计
     public Map<String, Object> getStatistics() {
         Map<String, Object> stats = new HashMap<>();
 
-        long totalUsers = userRepository.count();
+        long totalUsers = userRepository.findAll().stream()
+                .filter(user -> !Boolean.TRUE.equals(user.getDeleted()))
+                .count();
         long totalTeachers = teacherRepository.count();
         long totalStudents = studentRepository.count();
         long totalAppointments = appointmentRequestRepository.count();
@@ -157,9 +310,101 @@ public class AdminService {
         item.put("teachingQuality", evaluation.getTeachingQuality());
         item.put("attitude", evaluation.getAttitude());
         item.put("satisfaction", evaluation.getSatisfaction());
+        item.put("averageScore", calculateAverageScore(evaluation));
         item.put("comment", evaluation.getComment());
         item.put("createdAt", evaluation.getCreatedAt());
+        if (appointment != null) {
+            item.put("appointmentStatus", appointment.getStatus());
+            item.put("appointmentType", appointment.getAppointmentType());
+        }
         return item;
+    }
+
+    private int calculateAverageScore(Evaluation evaluation) {
+        int teachingQuality = evaluation.getTeachingQuality() == null ? 0 : evaluation.getTeachingQuality();
+        int attitude = evaluation.getAttitude() == null ? 0 : evaluation.getAttitude();
+        int satisfaction = evaluation.getSatisfaction() == null ? 0 : evaluation.getSatisfaction();
+        return Math.round((teachingQuality + attitude + satisfaction) / 3.0f);
+    }
+
+    private void refreshTeacherRating(User evaluated) {
+        if (evaluated == null || !"TEACHER".equals(evaluated.getRole())) {
+            return;
+        }
+
+        Teacher teacher = teacherRepository.findByUser(evaluated).orElse(null);
+        if (teacher == null) {
+            return;
+        }
+
+        List<Evaluation> evaluations = evaluationRepository.findByEvaluated(evaluated);
+        teacher.setReviewCount(evaluations.size());
+        if (evaluations.isEmpty()) {
+            teacher.setRating(0);
+        } else {
+            int totalScore = evaluations.stream()
+                    .mapToInt(this::calculateAverageScore)
+                    .sum();
+            teacher.setRating(Math.round(totalScore / (float) evaluations.size()));
+        }
+        teacherRepository.save(teacher);
+    }
+
+    private Map<String, Object> buildUserSummary(User user) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", user.getId());
+        item.put("username", user.getUsername());
+        item.put("name", user.getName());
+        item.put("email", user.getEmail());
+        item.put("phone", user.getPhone());
+        item.put("role", user.getRole());
+        item.put("enabled", !Boolean.FALSE.equals(user.getEnabled()));
+        item.put("deleted", Boolean.TRUE.equals(user.getDeleted()));
+        item.put("createdAt", user.getCreatedAt());
+        item.put("updatedAt", user.getUpdatedAt());
+        return item;
+    }
+
+    private Map<String, Object> successUserResponse(String message, User user) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        response.put("user", buildUserSummary(user));
+        return response;
+    }
+
+    private Map<String, Object> errorResponse(String error) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("success", false);
+        response.put("error", error);
+        return response;
+    }
+
+    private String normalizeRole(String role) {
+        if (!StringUtils.hasText(role)) {
+            return null;
+        }
+        String normalized = role.trim().toUpperCase();
+        return switch (normalized) {
+            case "ADMIN", "TEACHER", "STUDENT" -> normalized;
+            default -> null;
+        };
+    }
+
+    private Boolean getBoolean(Map<String, Object> data, String key, boolean defaultValue) {
+        Object value = data.get(key);
+        if (value instanceof Boolean boolValue) {
+            return boolValue;
+        }
+        if (value instanceof String stringValue && StringUtils.hasText(stringValue)) {
+            return Boolean.parseBoolean(stringValue);
+        }
+        return defaultValue;
+    }
+
+    private String getString(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        return value == null ? null : String.valueOf(value).trim();
     }
 
     private Map<String, Object> buildAppointmentSummary(AppointmentRequest appointment) {

@@ -18,6 +18,8 @@ public class User {
     private String phone;
     private String role; // STUDENT, TEACHER, ADMIN
     private String name;
+    private Boolean enabled;
+    private Boolean deleted;
     private Date createdAt;
     private Date updatedAt;
     
@@ -25,6 +27,12 @@ public class User {
     protected void onCreate() {
         createdAt = new Date();
         updatedAt = new Date();
+        if (enabled == null) {
+            enabled = true;
+        }
+        if (deleted == null) {
+            deleted = false;
+        }
     }
     
     @PreUpdate

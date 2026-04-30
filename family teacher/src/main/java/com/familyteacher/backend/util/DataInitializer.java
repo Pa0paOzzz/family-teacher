@@ -448,6 +448,10 @@ public class DataInitializer implements CommandLineRunner {
             existing.setRole(role);
             existing.setName(name);
             existing.setPhone(phone);
+            if (existing.getEnabled() == null) {
+                existing.setEnabled(true);
+            }
+            existing.setDeleted(false);
             if (existing.getPassword() == null || existing.getPassword().isBlank()) {
                 existing.setPassword(passwordEncoder.encode(password));
             }
@@ -460,6 +464,8 @@ public class DataInitializer implements CommandLineRunner {
             user.setRole(role);
             user.setName(name);
             user.setPhone(phone);
+            user.setEnabled(true);
+            user.setDeleted(false);
             return userRepository.save(user);
         });
     }

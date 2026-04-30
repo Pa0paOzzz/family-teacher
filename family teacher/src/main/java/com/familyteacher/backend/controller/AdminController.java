@@ -1,6 +1,5 @@
 package com.familyteacher.backend.controller;
 
-import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.entity.Teacher;
 import com.familyteacher.backend.entity.Student;
 import com.familyteacher.backend.entity.AppointmentRequest;
@@ -24,18 +23,33 @@ public class AdminController {
     
     // 用户管理
     @GetMapping("/users")
-    public List<User> getAllUsers() {
+    public List<Map<String, Object>> getAllUsers() {
         return adminService.getAllUsers();
+    }
+
+    @PostMapping("/users")
+    public Map<String, Object> createUser(@RequestBody Map<String, Object> userData) {
+        return adminService.createUser(userData);
+    }
+
+    @PutMapping("/users/{id}")
+    public Map<String, Object> updateUser(@PathVariable Long id, @RequestBody Map<String, Object> userData) {
+        return adminService.updateUser(id, userData);
     }
     
     @DeleteMapping("/user/{id}")
-    public void deleteUser(@PathVariable Long id) {
-        adminService.deleteUser(id);
+    public Map<String, Object> deleteUser(@PathVariable Long id) {
+        return adminService.deleteUser(id);
     }
     
     @PutMapping("/user/{id}/disable")
-    public User disableUser(@PathVariable Long id) {
+    public Map<String, Object> disableUser(@PathVariable Long id) {
         return adminService.disableUser(id);
+    }
+
+    @PutMapping("/user/{id}/enable")
+    public Map<String, Object> enableUser(@PathVariable Long id) {
+        return adminService.enableUser(id);
     }
     
     // 家教老师管理
@@ -93,6 +107,11 @@ public class AdminController {
     @GetMapping("/evaluations")
     public List<Map<String, Object>> getAllEvaluations() {
         return adminService.getAllEvaluations();
+    }
+
+    @DeleteMapping("/evaluations/{id}")
+    public Map<String, Object> deleteEvaluation(@PathVariable Long id) {
+        return adminService.deleteEvaluation(id);
     }
 
     // 订单管理

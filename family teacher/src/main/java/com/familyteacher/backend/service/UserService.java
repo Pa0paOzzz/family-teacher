@@ -48,7 +48,9 @@ public class UserService {
         Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            if (passwordEncoder.matches(password, user.getPassword())) {
+            if (!Boolean.TRUE.equals(user.getDeleted())
+                    && !Boolean.FALSE.equals(user.getEnabled())
+                    && passwordEncoder.matches(password, user.getPassword())) {
                 return jwtUtil.generateToken(username);
             }
         }
@@ -72,7 +74,8 @@ public class UserService {
             return null;
         }
         String username = jwtUtil.getUsernameFromToken(token);
-        return userRepository.findByUsername(username).orElse(null);
+        User user = userRepository.findByUsername(username).orElse(null);
+        return user == null || Boolean.TRUE.equals(user.getDeleted()) ? null : user;
     }
 
     public Map<String, Object> getUserProfile(User user) {

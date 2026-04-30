@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 @Service
 public class RecommendationService {
     private static final Set<String> MUNICIPALITIES = Set.of("北京市", "上海市", "天津市", "重庆市");
+    private static final Set<String> MUNICIPALITY_PLACEHOLDER_CITIES = Set.of("市辖区", "县");
 
     @Autowired
     private TeacherJobPostRepository teacherJobPostRepository;
@@ -31,15 +34,18 @@ public class RecommendationService {
         String city = normalizeCity(student == null ? null : student.getAddressCity());
         String province = normalizeProvince(student == null ? null : student.getAddressProvince());
         String district = normalizeDistrict(student == null ? null : student.getAddressDistrict());
+        Set<String> preferredSubjects = getStudentPreferredSubjects(student);
         List<TeacherJobPost> allPosts = teacherJobPostRepository.findByActiveTrue().stream()
                 .sorted(latestFirstTeacherPost())
                 .collect(Collectors.toList());
 
-        return prioritizeByLocation(
+        return prioritizeByLocationThenSubject(
                 allPosts,
                 city,
                 province,
                 district,
+                preferredSubjects,
+                TeacherJobPost::getSubject,
                 TeacherJobPost::getLocationCity,
                 TeacherJobPost::getLocationProvince,
                 TeacherJobPost::getLocationDistrict
@@ -50,15 +56,18 @@ public class RecommendationService {
         String city = normalizeCity(teacher == null ? null : teacher.getAddressCity());
         String province = normalizeProvince(teacher == null ? null : teacher.getAddressProvince());
         String district = normalizeDistrict(teacher == null ? null : teacher.getAddressDistrict());
+        Set<String> preferredSubjects = getTeacherPreferredSubjects(teacher);
         List<StudentTutoringRequest> allRequests = studentTutoringRequestRepository.findByActiveTrue().stream()
                 .sorted(latestFirstStudentRequest())
                 .collect(Collectors.toList());
 
-        return prioritizeByLocation(
+        return prioritizeByLocationThenSubject(
                 allRequests,
                 city,
                 province,
                 district,
+                preferredSubjects,
+                StudentTutoringRequest::getSubject,
                 StudentTutoringRequest::getLocationCity,
                 StudentTutoringRequest::getLocationProvince,
                 StudentTutoringRequest::getLocationDistrict
@@ -76,8 +85,8 @@ public class RecommendationService {
             return resources;
         }
 
-        List<T> sameCity = new ArrayList<>();
         List<T> sameMunicipalityDistrict = new ArrayList<>();
+        List<T> sameCity = new ArrayList<>();
         List<T> sameMunicipality = new ArrayList<>();
         List<T> otherLocation = new ArrayList<>();
 
@@ -86,10 +95,10 @@ public class RecommendationService {
             String resourceProvince = provinceGetter.apply(resource);
             String resourceDistrict = districtGetter.apply(resource);
 
-            if (isExactSameCity(profileCity, resourceCity)) {
-                sameCity.add(resource);
-            } else if (isSameMunicipalityDistrict(profileCity, profileProvince, profileDistrict, resourceCity, resourceProvince, resourceDistrict)) {
+            if (isSameMunicipalityDistrict(profileCity, profileProvince, profileDistrict, resourceCity, resourceProvince, resourceDistrict)) {
                 sameMunicipalityDistrict.add(resource);
+            } else if (isExactSameCity(profileCity, resourceCity)) {
+                sameCity.add(resource);
             } else if (isSameMunicipalityArea(profileCity, profileProvince, resourceCity, resourceProvince)) {
                 sameMunicipality.add(resource);
             } else {
@@ -97,16 +106,18 @@ public class RecommendationService {
             }
         }
 
-        sameCity.addAll(sameMunicipalityDistrict);
-        sameCity.addAll(sameMunicipality);
-        sameCity.addAll(otherLocation);
-        return sameCity;
+        sameMunicipalityDistrict.addAll(sameCity);
+        sameMunicipalityDistrict.addAll(sameMunicipality);
+        sameMunicipalityDistrict.addAll(otherLocation);
+        return sameMunicipalityDistrict;
     }
 
     private boolean isExactSameCity(String profileCity, String resourceCity) {
         String normalizedProfileCity = normalizeCity(profileCity);
         String normalizedResourceCity = normalizeCity(resourceCity);
-        return normalizedProfileCity != null && normalizedProfileCity.equals(normalizedResourceCity);
+        return normalizedProfileCity != null
+                && normalizedProfileCity.equals(normalizedResourceCity)
+                && !MUNICIPALITY_PLACEHOLDER_CITIES.contains(normalizedProfileCity);
     }
 
     private boolean isSameMunicipalityDistrict(String profileCity,
@@ -140,15 +151,21 @@ public class RecommendationService {
     }
 
     private String getMunicipality(String city, String province) {
-        if (!StringUtils.hasText(city) && !StringUtils.hasText(province)) {
+        String cityMunicipality = getMunicipalityFromText(city);
+        if (cityMunicipality != null) {
+            return cityMunicipality;
+        }
+        return getMunicipalityFromText(province);
+    }
+
+    private String getMunicipalityFromText(String textToCheck) {
+        if (!StringUtils.hasText(textToCheck)) {
             return null;
         }
 
-        String textToCheck = StringUtils.hasText(city) ? city : province;
-
         for (String municipality : MUNICIPALITIES) {
             String normalizedMunicipality = normalizeCity(municipality);
-            String shortName = normalizedMunicipality.replace("市", "");
+            String shortName = stripMunicipalitySuffix(normalizedMunicipality);
             if (textToCheck.equals(normalizedMunicipality)
                     || textToCheck.equals(shortName)
                     || textToCheck.startsWith(normalizedMunicipality)
@@ -157,6 +174,10 @@ public class RecommendationService {
             }
         }
         return null;
+    }
+
+    private String stripMunicipalitySuffix(String municipality) {
+        return municipality.endsWith("市") ? municipality.substring(0, municipality.length() - 1) : municipality;
     }
 
     private Comparator<TeacherJobPost> latestFirstTeacherPost() {
@@ -189,6 +210,129 @@ public class RecommendationService {
                 );
     }
 
+    private <T> List<T> prioritizeByLocationThenSubject(List<T> resources,
+                                                        String profileCity,
+                                                        String profileProvince,
+                                                        String profileDistrict,
+                                                        Set<String> preferredSubjects,
+                                                        java.util.function.Function<T, String> subjectGetter,
+                                                        java.util.function.Function<T, String> cityGetter,
+                                                        java.util.function.Function<T, String> provinceGetter,
+                                                        java.util.function.Function<T, String> districtGetter) {
+        List<T> prioritizedByLocation = prioritizeByLocation(
+                resources,
+                profileCity,
+                profileProvince,
+                profileDistrict,
+                cityGetter,
+                provinceGetter,
+                districtGetter
+        );
+
+        if (preferredSubjects == null || preferredSubjects.isEmpty()) {
+            return prioritizedByLocation;
+        }
+
+        List<T> sameMunicipalityDistrict = new ArrayList<>();
+        List<T> sameCity = new ArrayList<>();
+        List<T> sameMunicipality = new ArrayList<>();
+        List<T> otherLocation = new ArrayList<>();
+
+        for (T resource : prioritizedByLocation) {
+            String resourceCity = cityGetter.apply(resource);
+            String resourceProvince = provinceGetter.apply(resource);
+            String resourceDistrict = districtGetter.apply(resource);
+
+            if (isSameMunicipalityDistrict(profileCity, profileProvince, profileDistrict, resourceCity, resourceProvince, resourceDistrict)) {
+                sameMunicipalityDistrict.add(resource);
+            } else if (isExactSameCity(profileCity, resourceCity)) {
+                sameCity.add(resource);
+            } else if (isSameMunicipalityArea(profileCity, profileProvince, resourceCity, resourceProvince)) {
+                sameMunicipality.add(resource);
+            } else {
+                otherLocation.add(resource);
+            }
+        }
+
+        List<T> prioritized = new ArrayList<>();
+        prioritized.addAll(prioritizeBySubject(sameMunicipalityDistrict, preferredSubjects, subjectGetter));
+        prioritized.addAll(prioritizeBySubject(sameCity, preferredSubjects, subjectGetter));
+        prioritized.addAll(prioritizeBySubject(sameMunicipality, preferredSubjects, subjectGetter));
+        prioritized.addAll(prioritizeBySubject(otherLocation, preferredSubjects, subjectGetter));
+        return prioritized;
+    }
+
+    private <T> List<T> prioritizeBySubject(List<T> resources,
+                                            Set<String> preferredSubjects,
+                                            java.util.function.Function<T, String> subjectGetter) {
+        List<T> sameSubject = new ArrayList<>();
+        List<T> otherSubject = new ArrayList<>();
+
+        for (T resource : resources) {
+            if (isSubjectMatch(preferredSubjects, subjectGetter.apply(resource))) {
+                sameSubject.add(resource);
+            } else {
+                otherSubject.add(resource);
+            }
+        }
+
+        sameSubject.addAll(otherSubject);
+        return sameSubject;
+    }
+
+    private Set<String> getStudentPreferredSubjects(Student student) {
+        if (student == null) {
+            return Set.of();
+        }
+        List<StudentTutoringRequest> requests = studentTutoringRequestRepository.findByStudentAndActiveTrue(student);
+        if (requests == null) {
+            return Set.of();
+        }
+        return requests.stream()
+                .sorted(latestFirstStudentRequest())
+                .map(StudentTutoringRequest::getSubject)
+                .map(this::normalizeSubject)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private Set<String> getTeacherPreferredSubjects(Teacher teacher) {
+        Set<String> subjects = splitSubjects(teacher == null ? null : teacher.getSubject());
+        if (!subjects.isEmpty() || teacher == null) {
+            return subjects;
+        }
+
+        List<TeacherJobPost> posts = teacherJobPostRepository.findByTeacherAndActiveTrue(teacher);
+        if (posts == null) {
+            return Set.of();
+        }
+        return posts.stream()
+                .sorted(latestFirstTeacherPost())
+                .map(TeacherJobPost::getSubject)
+                .map(this::normalizeSubject)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private boolean isSubjectMatch(Collection<String> preferredSubjects, String resourceSubject) {
+        String normalizedResourceSubject = normalizeSubject(resourceSubject);
+        return normalizedResourceSubject != null && preferredSubjects.contains(normalizedResourceSubject);
+    }
+
+    private Set<String> splitSubjects(String subjects) {
+        if (!StringUtils.hasText(subjects)) {
+            return Set.of();
+        }
+        Set<String> result = new LinkedHashSet<>();
+        for (String subject : subjects.split("[,，、/\\s]+")) {
+            String normalizedSubject = normalizeSubject(subject);
+            if (normalizedSubject != null) {
+                result.add(normalizedSubject);
+            }
+        }
+        return result;
+    }
+
     private String normalizeCity(String city) {
         if (!StringUtils.hasText(city)) {
             return null;
@@ -208,5 +352,12 @@ public class RecommendationService {
             return null;
         }
         return district.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeSubject(String subject) {
+        if (!StringUtils.hasText(subject)) {
+            return null;
+        }
+        return subject.trim().toLowerCase(Locale.ROOT);
     }
 }

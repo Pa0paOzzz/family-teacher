@@ -113,10 +113,16 @@ export const favoriteApi = {
 // 管理员相关API
 export const adminApi = {
   getUsers: () => api.get('/admin/users'),
+  createUser: (data) => api.post('/admin/users', data),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/user/${id}`),
+  disableUser: (id) => api.put(`/admin/user/${id}/disable`),
+  enableUser: (id) => api.put(`/admin/user/${id}/enable`),
   getAppointments: () => api.get('/admin/appointments'),
   getAppointmentById: (id) => api.get(`/admin/appointments/${id}`),
   updateAppointment: (id, data) => api.put(`/admin/appointments/${id}`, data),
   getEvaluations: () => api.get('/admin/evaluations'),
+  deleteEvaluation: (id) => api.delete(`/admin/evaluations/${id}`),
   getStatistics: () => api.get('/admin/statistics')
 };
 
