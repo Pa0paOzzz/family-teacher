@@ -133,6 +133,49 @@ public class TeacherJobPostService {
         return response;
     }
 
+    @Transactional
+    public Map<String, Object> setJobPostActive(Long id, boolean active) {
+        TeacherJobPost jobPost = teacherJobPostRepository.findById(id).orElse(null);
+        Map<String, Object> response = new HashMap<>();
+        if (jobPost == null) {
+            response.put("success", false);
+            response.put("error", "Job post not found");
+            return response;
+        }
+
+        jobPost.setActive(active);
+        teacherJobPostRepository.save(jobPost);
+
+        response.put("success", true);
+        response.put("message", active ? "Job post activated successfully" : "Job post deactivated successfully");
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> adminUpdateJobPost(Long id, Map<String, Object> jobPostData) {
+        Map<String, Object> response = updateJobPost(id, jobPostData);
+        if (!response.containsKey("success")) {
+            response.put("success", false);
+        }
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> adminDeleteJobPost(Long id) {
+        TeacherJobPost jobPost = teacherJobPostRepository.findById(id).orElse(null);
+        Map<String, Object> response = new HashMap<>();
+        if (jobPost == null) {
+            response.put("success", false);
+            response.put("error", "Job post not found");
+            return response;
+        }
+
+        teacherJobPostRepository.delete(jobPost);
+        response.put("success", true);
+        response.put("message", "Job post deleted successfully");
+        return response;
+    }
+
     private void applyLocation(TeacherJobPost jobPost, Map<String, Object> jobPostData) {
         if (!hasLocationPayload(jobPostData)) {
             return;

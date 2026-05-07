@@ -2,7 +2,7 @@
   <div class="location-selector">
     <el-select
       :model-value="province"
-      placeholder="选择省"
+      placeholder="选择省份"
       clearable
       class="location-select"
       @change="handleProvinceChange"
@@ -17,7 +17,7 @@
 
     <el-select
       :model-value="city"
-      placeholder="选择市"
+      placeholder="选择城市"
       clearable
       class="location-select"
       :disabled="!province"
@@ -33,7 +33,7 @@
 
     <el-select
       :model-value="district"
-      placeholder="选择区"
+      placeholder="选择区县"
       clearable
       class="location-select"
       :disabled="!city"

@@ -6,14 +6,10 @@
           <h2>家教平台</h2>
           <p>管理员端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><DataLine /></el-icon>
-            <span>仪表板</span>
+            <span>仪表盘</span>
           </el-menu-item>
           <el-menu-item index="2">
             <el-icon><User /></el-icon>
@@ -24,10 +20,14 @@
             <span>预约管理</span>
           </el-menu-item>
           <el-menu-item index="4">
+            <el-icon><Document /></el-icon>
+            <span>求职与需求</span>
+          </el-menu-item>
+          <el-menu-item index="5">
             <el-icon><Comment /></el-icon>
             <span>评价管理</span>
           </el-menu-item>
-          <el-menu-item index="5">
+          <el-menu-item index="6">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -84,18 +84,11 @@
             </el-select>
           </div>
 
-          <el-table
-            v-loading="loading"
-            :data="pagedEvaluations"
-            style="width: 100%"
-            empty-text="暂无评价数据"
-          >
+          <el-table v-loading="loading" :data="pagedEvaluations" style="width: 100%" empty-text="暂无评价数据">
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column label="评价方向" width="130">
               <template #default="{ row }">
-                <el-tag :type="getDirectionTagType(row)">
-                  {{ getDirectionText(row) }}
-                </el-tag>
+                <el-tag :type="getDirectionTagType(row)">{{ getDirectionText(row) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="评价人" min-width="140">
@@ -214,6 +207,7 @@ import {
   Comment,
   DataLine,
   Delete,
+  Document,
   Refresh,
   Search,
   SwitchButton,
@@ -227,13 +221,14 @@ export default {
     Calendar,
     Comment,
     DataLine,
+    Document,
     Search,
     SwitchButton,
     User
   },
   data() {
     return {
-      activeIndex: '4',
+      activeIndex: '5',
       Delete,
       Refresh,
       View,
@@ -294,7 +289,7 @@ export default {
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/admin/dashboard');
           break;
@@ -305,9 +300,12 @@ export default {
           this.$router.push('/admin/appointments');
           break;
         case '4':
-          this.$router.push('/admin/evaluations');
+          this.$router.push('/admin/resources');
           break;
         case '5':
+          this.$router.push('/admin/evaluations');
+          break;
+        case '6':
           this.logout();
           break;
       }
@@ -336,7 +334,7 @@ export default {
         return;
       }
       try {
-        await this.$confirm(`确认删除评价 #${evaluation.id}？`, '删除确认', {
+        await this.$confirm(`确认删除评价 #${evaluation.id} 吗？`, '删除确认', {
           confirmButtonText: '删除',
           cancelButtonText: '取消',
           type: 'warning'
@@ -346,7 +344,7 @@ export default {
           this.$message.error(response.error || '删除失败');
           return;
         }
-        this.$message.success(response?.message || '删除成功');
+        this.$message.success('删除成功');
         this.detailDialogVisible = false;
         await this.loadEvaluations();
       } catch (error) {
@@ -368,10 +366,10 @@ export default {
     getDirectionText(evaluation) {
       const direction = this.getDirection(evaluation);
       if (direction === 'STUDENT_TO_TEACHER') {
-        return '学生评老师';
+        return '学生评价老师';
       }
       if (direction === 'TEACHER_TO_STUDENT') {
-        return '老师评学生';
+        return '老师评价学生';
       }
       return '其他评价';
     },
@@ -478,12 +476,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -493,16 +491,17 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  color: #409EFF;
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  color: #409eff;
   background-color: #263445;
 }
 
@@ -523,7 +522,9 @@ export default {
 
 .page-header h2 {
   margin: 0;
-  color: #409EFF;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .summary-grid {

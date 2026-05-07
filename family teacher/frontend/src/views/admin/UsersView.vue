@@ -6,14 +6,10 @@
           <h2>家教平台</h2>
           <p>管理员端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><DataLine /></el-icon>
-            <span>仪表板</span>
+            <span>仪表盘</span>
           </el-menu-item>
           <el-menu-item index="2">
             <el-icon><User /></el-icon>
@@ -24,10 +20,14 @@
             <span>预约管理</span>
           </el-menu-item>
           <el-menu-item index="4">
+            <el-icon><Document /></el-icon>
+            <span>求职与需求</span>
+          </el-menu-item>
+          <el-menu-item index="5">
             <el-icon><Comment /></el-icon>
             <span>评价管理</span>
           </el-menu-item>
-          <el-menu-item index="5">
+          <el-menu-item index="6">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -57,23 +57,20 @@
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
+
             <el-select v-model="roleFilter" clearable placeholder="角色" class="filter-select" @change="resetPage">
               <el-option label="管理员" value="ADMIN" />
-              <el-option label="家教老师" value="TEACHER" />
+              <el-option label="教师" value="TEACHER" />
               <el-option label="学生" value="STUDENT" />
             </el-select>
+
             <el-select v-model="statusFilter" clearable placeholder="状态" class="filter-select" @change="resetPage">
               <el-option label="启用" :value="true" />
               <el-option label="禁用" :value="false" />
             </el-select>
           </div>
 
-          <el-table
-            v-loading="loading"
-            :data="pagedUsers"
-            style="width: 100%"
-            empty-text="暂无用户"
-          >
+          <el-table v-loading="loading" :data="pagedUsers" style="width: 100%" empty-text="暂无用户">
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="username" label="用户名" min-width="130" />
             <el-table-column prop="name" label="姓名" min-width="120">
@@ -158,7 +155,7 @@
         <el-form-item label="角色" required>
           <el-select v-model="userForm.role" placeholder="请选择角色" style="width: 100%">
             <el-option label="管理员" value="ADMIN" />
-            <el-option label="家教老师" value="TEACHER" />
+            <el-option label="教师" value="TEACHER" />
             <el-option label="学生" value="STUDENT" />
           </el-select>
         </el-form-item>
@@ -199,6 +196,7 @@ import {
   Comment,
   DataLine,
   Delete,
+  Document,
   Edit,
   Plus,
   Refresh,
@@ -213,6 +211,7 @@ export default {
     Calendar,
     Comment,
     DataLine,
+    Document,
     Search,
     SwitchButton,
     User
@@ -243,12 +242,8 @@ export default {
     filteredUsers() {
       const query = this.searchQuery.trim().toLowerCase();
       return this.usersList.filter(user => {
-        const matchesQuery = !query || [
-          user.username,
-          user.name,
-          user.email,
-          user.phone
-        ].some(value => String(value || '').toLowerCase().includes(query));
+        const matchesQuery = !query || [user.username, user.name, user.email, user.phone]
+          .some(value => String(value || '').toLowerCase().includes(query));
         const matchesRole = !this.roleFilter || user.role === this.roleFilter;
         const matchesStatus = this.statusFilter === '' || user.enabled === this.statusFilter;
         return matchesQuery && matchesRole && matchesStatus;
@@ -298,7 +293,7 @@ export default {
       }
     },
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/admin/dashboard');
           break;
@@ -309,9 +304,12 @@ export default {
           this.$router.push('/admin/appointments');
           break;
         case '4':
-          this.$router.push('/admin/evaluations');
+          this.$router.push('/admin/resources');
           break;
         case '5':
+          this.$router.push('/admin/evaluations');
+          break;
+        case '6':
           this.logout();
           break;
       }
@@ -353,6 +351,7 @@ export default {
         if (this.editingUserId && !payload.password) {
           delete payload.password;
         }
+
         const response = this.editingUserId
           ? await adminApi.updateUser(this.editingUserId, payload)
           : await adminApi.createUser(payload);
@@ -361,7 +360,8 @@ export default {
           this.$message.error(response.error || '保存失败');
           return;
         }
-        this.$message.success(response?.message || '保存成功');
+
+        this.$message.success('保存成功');
         this.dialogVisible = false;
         await this.loadUsers();
       } catch (error) {
@@ -381,7 +381,8 @@ export default {
           this.$message.error(response.error || '操作失败');
           return;
         }
-        this.$message.success(response?.message || '操作成功');
+
+        this.$message.success('操作成功');
         await this.loadUsers();
       } catch (error) {
         console.error('更新用户状态失败:', error);
@@ -390,17 +391,19 @@ export default {
     },
     async confirmDeleteUser(user) {
       try {
-        await this.$confirm(`确认删除用户 ${user.username}？`, '删除确认', {
+        await this.$confirm(`确认删除用户 ${user.username} 吗？`, '删除确认', {
           confirmButtonText: '删除',
           cancelButtonText: '取消',
           type: 'warning'
         });
+
         const response = await adminApi.deleteUser(user.id);
         if (response?.success === false) {
           this.$message.error(response.error || '删除失败');
           return;
         }
-        this.$message.success(response?.message || '删除成功');
+
+        this.$message.success('删除成功');
         await this.loadUsers();
       } catch (error) {
         if (error !== 'cancel' && error !== 'close') {
@@ -415,7 +418,7 @@ export default {
     getRoleText(role) {
       const roleMap = {
         ADMIN: '管理员',
-        TEACHER: '家教老师',
+        TEACHER: '教师',
         STUDENT: '学生'
       };
       return roleMap[role] || role || '未知';
@@ -431,14 +434,13 @@ export default {
     },
     formatDateTime(value) {
       if (!value) {
-        return '未知';
+        return '-';
       }
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) {
         return value;
       }
-      const pad = number => String(number).padStart(2, '0');
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      return date.toLocaleString('zh-CN', { hour12: false });
     },
     logout() {
       localStorage.removeItem('token');
@@ -482,12 +484,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -497,97 +499,73 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  color: #409EFF;
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  color: #409eff;
   background-color: #263445;
 }
 
 .users-container {
-  padding: 24px;
+  padding: 30px;
   background-color: white;
   border-radius: 8px;
   min-height: calc(100vh - 40px);
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .page-header h2 {
   margin: 0;
-  color: #409EFF;
-}
-
-.header-actions,
-.filter-bar,
-.table-actions,
-.dialog-footer {
-  display: flex;
-  align-items: center;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .header-actions {
+  display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .filter-bar {
+  display: flex;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
 .search-input {
   width: 320px;
+  max-width: 100%;
 }
 
 .filter-select {
-  width: 140px;
+  width: 180px;
 }
 
 .table-actions {
+  display: flex;
   gap: 8px;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-}
-
-.table-actions .el-button {
-  margin-left: 0;
 }
 
 .pagination-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: 18px;
-}
-
-.dialog-footer {
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-@media (max-width: 900px) {
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .search-input,
-  .filter-select {
-    width: 100%;
-  }
+  margin-top: 20px;
 }
 </style>

@@ -30,11 +30,13 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA);
+    private static final Set<String> MUNICIPALITIES = Set.of("北京市", "天津市", "上海市", "重庆市");
 
     @Autowired
     private UserRepository userRepository;
@@ -93,7 +95,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest1 = ensureAppointment(
                 student1, teacher1, "数学", "北京市海淀区", 150.0,
-                parseDate("2026-04-27"), "周末上午", 2, "想先了解老师的教学风格", "PENDING"
+                parseDate("2026-04-27"), "周末上午", 2, "想先了解老师的教学风格", "PENDING", "STUDENT"
         );
         ensureOrder(appointmentRequest1, 300.0, "PENDING");
         ensureFavorite(student1.getUser(), "TEACHER_JOB_POST", jobPost1.getId());
@@ -122,7 +124,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest2 = ensureAppointment(
                 student2, teacher2, "英语", "上海市浦东新区", 180.0,
-                parseDate("2026-04-19"), "周六下午 14:00", 2, "想重点练习口语表达和托福面试", "LONG_TERM_COMPLETED"
+                parseDate("2026-04-19"), "周六下午 14:00", 2, "想重点练习口语表达和托福面试", "LONG_TERM_COMPLETED", "STUDENT"
         );
         appointmentRequest2.setStudentConfirmedLongTerm(true);
         appointmentRequest2.setTeacherConfirmedLongTerm(true);
@@ -187,7 +189,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest4 = ensureAppointment(
                 student4, teacher4, "化学", "南京市鼓楼区", 160.0,
-                parseDate("2026-04-25"), "周六上午 09:00", 2, "希望先从有机化学基础开始", "ACCEPTED"
+                parseDate("2026-04-25"), "周六上午 09:00", 2, "希望先从有机化学基础开始", "ACCEPTED", "STUDENT"
         );
         ensureOrder(appointmentRequest4, 320.0, "PENDING");
         ensureFavorite(student4.getUser(), "TEACHER_JOB_POST", jobPost4.getId());
@@ -261,7 +263,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest5 = ensureAppointment(
                 student5, teacher6, "编程", "杭州市西湖区", 220.0,
-                parseDate("2026-05-03"), "周日上午 10:00", 2, "希望从 Python 基础语法开始学习", "REJECTED"
+                parseDate("2026-05-03"), "周日上午 10:00", 2, "希望从 Python 基础语法开始学习", "REJECTED", "STUDENT"
         );
         ensureFavorite(student5.getUser(), "TEACHER_JOB_POST", jobPost6.getId());
         ensureFavorite(teacher6.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest5.getId());
@@ -301,7 +303,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest8 = ensureAppointment(
                 student8, teacher8, "英语", "北京市朝阳区", 190.0,
-                parseDate("2026-04-20"), "周日白天", 2, "想加强面试中的英语表达和听力反应", "LONG_TERM_COMPLETED"
+                parseDate("2026-04-20"), "周日白天", 2, "想加强面试中的英语表达和听力反应", "LONG_TERM_COMPLETED", "STUDENT"
         );
         appointmentRequest8.setStudentConfirmedLongTerm(true);
         appointmentRequest8.setTeacherConfirmedLongTerm(true);
@@ -331,7 +333,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         AppointmentRequest appointmentRequest9 = ensureAppointment(
                 student9, teacher3, "物理", "杭州市滨江区", 200.0,
-                parseDate("2026-04-13"), "周日下午 15:00", 3, "想先试上一节竞赛提高课", "LONG_TERM_COMPLETED"
+                parseDate("2026-04-13"), "周日下午 15:00", 3, "想先试上一节竞赛提高课", "LONG_TERM_COMPLETED", "STUDENT"
         );
         appointmentRequest9.setStudentConfirmedLongTerm(true);
         appointmentRequest9.setTeacherConfirmedLongTerm(true);
@@ -383,6 +385,50 @@ public class DataInitializer implements CommandLineRunner {
                 "从语法基础到项目练习，适合零基础和学校课程同步提升",
                 "编程", 190.0, "浙江省", "杭州市", "滨江区", "周末全天，周二晚上"
         );
+        Teacher teacher13 = ensureTeacher(
+                ensureUser("teacher13", "teacher123", "teacher13@example.com", "TEACHER", "冯老师", "11800118001"),
+                "四川大学", "化学工程", "硕士", "5年", "化学",
+                "擅长中学化学体系梳理和实验题专项训练，课堂节奏清晰", 185.0, "四川省", "成都市", "武侯区"
+        );
+        TeacherJobPost jobPost13 = ensureTeacherJobPost(
+                teacher13,
+                "成都化学家教，强化实验与提分",
+                "适合初高中学生，重点讲解实验设计、化学方程式与综合题拆解",
+                "化学", 185.0, "四川省", "成都市", "武侯区", "周二、周四晚上，周末下午"
+        );
+        Teacher teacher14 = ensureTeacher(
+                ensureUser("teacher14", "teacher123", "teacher14@example.com", "TEACHER", "沈老师", "11700117001"),
+                "哈尔滨工业大学（深圳）", "物理学", "硕士", "4年", "物理",
+                "擅长高中物理建模与压轴题讲解，注重思路表达和错因复盘", 210.0, "广东省", "深圳市", "南山区"
+        );
+        TeacherJobPost jobPost14 = ensureTeacherJobPost(
+                teacher14,
+                "深圳高中物理辅导",
+                "覆盖力学、电磁学、选修模块，适合基础巩固与拔高训练",
+                "物理", 210.0, "广东省", "深圳市", "南山区", "周三晚上、周六全天"
+        );
+        Teacher teacher15 = ensureTeacher(
+                ensureUser("teacher15", "teacher123", "teacher15@example.com", "TEACHER", "姚老师", "11600116001"),
+                "苏州大学", "汉语言文学", "硕士", "6年", "语文",
+                "擅长阅读理解、古诗文和作文提升，重视答题模板和表达训练", 168.0, "江苏省", "苏州市", "姑苏区"
+        );
+        TeacherJobPost jobPost15 = ensureTeacherJobPost(
+                teacher15,
+                "苏州语文提分与写作辅导",
+                "面向初高中学生，帮助提升阅读速度、作文结构与语文综合素养",
+                "语文", 168.0, "江苏省", "苏州市", "姑苏区", "周一、周五晚上，周日全天"
+        );
+        Teacher teacher16 = ensureTeacher(
+                ensureUser("teacher16", "teacher123", "teacher16@example.com", "TEACHER", "秦老师", "11500115001"),
+                "天津师范大学", "英语教育", "硕士", "5年", "英语",
+                "擅长中学英语阅读、语法与口语训练，熟悉校内外英语考试节奏", 176.0, "天津市", "天津市", "南开区"
+        );
+        TeacherJobPost jobPost16 = ensureTeacherJobPost(
+                teacher16,
+                "天津英语家教，阅读写作专项",
+                "针对中学生英语成绩提升，兼顾词汇、语法、阅读与写作表达",
+                "英语", 176.0, "天津市", "天津市", "南开区", "周内晚上，周末上午"
+        );
 
         Student student10 = ensureStudent(
                 ensureUser("student10", "student123", "student10@example.com", "STUDENT", "唐佳怡", "12100121001"),
@@ -414,14 +460,62 @@ public class DataInitializer implements CommandLineRunner {
                 "想重点提升英语写作和阅读，准备校内阶段考试和竞赛选拔",
                 "英语", 150.0, "湖北省", "武汉市", "武昌区", "周日晚"
         );
+        Student student13 = ensureStudent(
+                ensureUser("student13", "student123", "student13@example.com", "STUDENT", "蒋依琳", "11400114001"),
+                "重庆市第八中学", "高二", "高中课程", "重庆市", "重庆市", "渝北区"
+        );
+        StudentTutoringRequest tutoringRequest13 = ensureStudentTutoringRequest(
+                student13,
+                "寻找数学家教，攻克解析几何",
+                "高二学生，解析几何和函数综合题较弱，希望老师能系统梳理解题思路",
+                "数学", 190.0, "重庆市", "重庆市", "渝北区", "周六下午、周日晚上"
+        );
+        Student student14 = ensureStudent(
+                ensureUser("student14", "student123", "student14@example.com", "STUDENT", "程浩然", "11300113001"),
+                "华南师范大学附属中学", "高一", "高中课程", "广东省", "广州市", "天河区"
+        );
+        StudentTutoringRequest tutoringRequest14 = ensureStudentTutoringRequest(
+                student14,
+                "寻找英语口语与阅读老师",
+                "希望提升口语表达和阅读速度，为校内英语分层考试做准备",
+                "英语", 180.0, "广东省", "广州市", "天河区", "周二晚上、周六上午"
+        );
+        Student student15 = ensureStudent(
+                ensureUser("student15", "student123", "student15@example.com", "STUDENT", "曹宇航", "11200112001"),
+                "苏州工业园区星海实验中学", "初三", "初中课程", "江苏省", "苏州市", "苏州工业园区"
+        );
+        StudentTutoringRequest tutoringRequest15 = ensureStudentTutoringRequest(
+                student15,
+                "寻找编程启蒙老师",
+                "想利用暑假学习 Python 和信息竞赛基础，希望课程循序渐进",
+                "编程", 160.0, "江苏省", "苏州市", "苏州工业园区", "周三晚上、周日下午"
+        );
+        Student student16 = ensureStudent(
+                ensureUser("student16", "student123", "student16@example.com", "STUDENT", "邓若溪", "11100111001"),
+                "成都市第七中学", "高一", "高中课程", "四川省", "成都市", "锦江区"
+        );
+        StudentTutoringRequest tutoringRequest16 = ensureStudentTutoringRequest(
+                student16,
+                "寻找生物老师，强化遗传专题",
+                "生物选择题和遗传大题失分较多，希望老师帮我建立知识框架和答题习惯",
+                "生物", 175.0, "四川省", "成都市", "锦江区", "周四晚上、周日上午"
+        );
 
         ensureFavorite(student10.getUser(), "TEACHER_JOB_POST", jobPost5.getId());
         ensureFavorite(student11.getUser(), "TEACHER_JOB_POST", jobPost12.getId());
         ensureFavorite(student12.getUser(), "TEACHER_JOB_POST", jobPost11.getId());
+        ensureFavorite(student13.getUser(), "TEACHER_JOB_POST", jobPost10.getId());
+        ensureFavorite(student14.getUser(), "TEACHER_JOB_POST", jobPost16.getId());
+        ensureFavorite(student15.getUser(), "TEACHER_JOB_POST", jobPost12.getId());
+        ensureFavorite(student16.getUser(), "TEACHER_JOB_POST", jobPost13.getId());
         ensureFavorite(teacher5.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest10.getId());
         ensureFavorite(teacher11.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest2.getId());
         ensureFavorite(teacher12.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest11.getId());
         ensureFavorite(teacher8.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest12.getId());
+        ensureFavorite(teacher13.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest16.getId());
+        ensureFavorite(teacher14.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest13.getId());
+        ensureFavorite(teacher15.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest15.getId());
+        ensureFavorite(teacher16.getUser(), "STUDENT_TUTORING_REQUEST", tutoringRequest14.getId());
         ensureFavorite(student6.getUser(), "TEACHER_JOB_POST", jobPost7.getId());
         ensureFavorite(student7.getUser(), "TEACHER_JOB_POST", jobPost9.getId());
         ensureFavorite(student8.getUser(), "TEACHER_JOB_POST", jobPost10.getId());
@@ -438,6 +532,10 @@ public class DataInitializer implements CommandLineRunner {
         refreshTeacherRating(teacher10);
         refreshTeacherRating(teacher11);
         refreshTeacherRating(teacher12);
+        refreshTeacherRating(teacher13);
+        refreshTeacherRating(teacher14);
+        refreshTeacherRating(teacher15);
+        refreshTeacherRating(teacher16);
 
         System.out.println("样例数据初始化完成或已补齐！管理员: " + adminUser.getUsername());
     }
@@ -543,7 +641,7 @@ public class DataInitializer implements CommandLineRunner {
     private AppointmentRequest ensureAppointment(Student student, Teacher teacher, String subject,
                                                  String location, Double pricePerHour, Date requestedDate,
                                                  String requestedTime, Integer durationHours,
-                                                 String notes, String status) {
+                                                 String notes, String status, String initiatorRole) {
         AppointmentRequest appointmentRequest = appointmentRequestRepository.findByStudent(student).stream()
                 .filter(appointment -> teacher.equals(appointment.getTeacher()))
                 .filter(appointment -> subject.equals(appointment.getSubject()))
@@ -560,6 +658,7 @@ public class DataInitializer implements CommandLineRunner {
         appointmentRequest.setRequestedTime(requestedTime);
         appointmentRequest.setDurationHours(durationHours);
         appointmentRequest.setNotes(notes);
+        appointmentRequest.setInitiatorRole(initiatorRole);
         appointmentRequest.setStatus(status);
         appointmentRequest.setStudentConfirmedLongTerm("LONG_TERM_CONFIRMED".equals(status) || "LONG_TERM_COMPLETED".equals(status));
         appointmentRequest.setTeacherConfirmedLongTerm("LONG_TERM_CONFIRMED".equals(status) || "LONG_TERM_COMPLETED".equals(status));
@@ -634,10 +733,11 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void applyAddress(Student student, String province, String city, String district) {
-        String formatted = formatLocation(province, city, district);
+        String normalizedCity = normalizeCity(province, city);
+        String formatted = formatLocation(province, normalizedCity, district);
         student.setAddress(formatted);
         student.setAddressProvince(province);
-        student.setAddressCity(city);
+        student.setAddressCity(normalizedCity);
         student.setAddressDistrict(district);
         student.setAddressFormatted(formatted);
         student.setAddressLongitude(null);
@@ -645,10 +745,11 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void applyAddress(Teacher teacher, String province, String city, String district) {
-        String formatted = formatLocation(province, city, district);
+        String normalizedCity = normalizeCity(province, city);
+        String formatted = formatLocation(province, normalizedCity, district);
         teacher.setAddress(formatted);
         teacher.setAddressProvince(province);
-        teacher.setAddressCity(city);
+        teacher.setAddressCity(normalizedCity);
         teacher.setAddressDistrict(district);
         teacher.setAddressFormatted(formatted);
         teacher.setAddressLongitude(null);
@@ -656,10 +757,11 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void applyLocation(TeacherJobPost jobPost, String province, String city, String district) {
-        String formatted = formatLocation(province, city, district);
+        String normalizedCity = normalizeCity(province, city);
+        String formatted = formatLocation(province, normalizedCity, district);
         jobPost.setLocation(formatted);
         jobPost.setLocationProvince(province);
-        jobPost.setLocationCity(city);
+        jobPost.setLocationCity(normalizedCity);
         jobPost.setLocationDistrict(district);
         jobPost.setLocationFormatted(formatted);
         jobPost.setLocationLongitude(null);
@@ -667,10 +769,11 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void applyLocation(StudentTutoringRequest tutoringRequest, String province, String city, String district) {
-        String formatted = formatLocation(province, city, district);
+        String normalizedCity = normalizeCity(province, city);
+        String formatted = formatLocation(province, normalizedCity, district);
         tutoringRequest.setLocation(formatted);
         tutoringRequest.setLocationProvince(province);
-        tutoringRequest.setLocationCity(city);
+        tutoringRequest.setLocationCity(normalizedCity);
         tutoringRequest.setLocationDistrict(district);
         tutoringRequest.setLocationFormatted(formatted);
         tutoringRequest.setLocationLongitude(null);
@@ -678,10 +781,23 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private String formatLocation(String province, String city, String district) {
+        if ("市辖区".equals(city)) {
+            return province + district;
+        }
         if (province != null && province.equals(city)) {
             return city + district;
         }
         return province + city + district;
+    }
+
+    private String normalizeCity(String province, String city) {
+        if (province == null) {
+            return city;
+        }
+        if (MUNICIPALITIES.contains(province) && (city == null || city.isBlank() || province.equals(city))) {
+            return "市辖区";
+        }
+        return city;
     }
 
     private Date parseDate(String value) {

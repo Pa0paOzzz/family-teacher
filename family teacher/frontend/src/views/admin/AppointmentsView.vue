@@ -6,14 +6,10 @@
           <h2>家教平台</h2>
           <p>管理员端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><DataLine /></el-icon>
-            <span>仪表板</span>
+            <span>仪表盘</span>
           </el-menu-item>
           <el-menu-item index="2">
             <el-icon><User /></el-icon>
@@ -24,15 +20,20 @@
             <span>预约管理</span>
           </el-menu-item>
           <el-menu-item index="4">
+            <el-icon><Document /></el-icon>
+            <span>求职与需求</span>
+          </el-menu-item>
+          <el-menu-item index="5">
             <el-icon><Comment /></el-icon>
             <span>评价管理</span>
           </el-menu-item>
-          <el-menu-item index="5">
+          <el-menu-item index="6">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-main>
         <div class="appointments-container">
           <h2>预约管理</h2>
@@ -48,20 +49,15 @@
                 <el-button @click="loadAppointments">搜索</el-button>
               </template>
             </el-input>
-            <el-select
-              v-model="statusFilter"
-              placeholder="按状态筛选"
-              clearable
-              class="status-select"
-            >
+
+            <el-select v-model="statusFilter" placeholder="按状态筛选" clearable class="status-select">
               <el-option label="全部" value="" />
-              <el-option label="待处理" value="PENDING" />
-              <el-option label="已接受" value="ACCEPTED" />
-              <el-option label="试课已完成" value="COMPLETED" />
-              <el-option label="试课已拒绝" value="REJECTED" />
-              <el-option label="已确认长期合作" value="LONG_TERM_CONFIRMED" />
-              <el-option label="长期授课已完成" value="LONG_TERM_COMPLETED" />
-              <el-option label="已拒绝长期合作" value="LONG_TERM_REJECTED" />
+              <el-option
+                v-for="option in statusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
             </el-select>
           </div>
 
@@ -74,35 +70,29 @@
             <el-table-column prop="requestedTime" label="预约时间" min-width="110" />
             <el-table-column prop="location" label="地点" min-width="160" show-overflow-tooltip />
             <el-table-column prop="pricePerHour" label="价格/小时" width="110">
-              <template #default="scope">
-                ¥{{ scope.row.pricePerHour || 0 }}
-              </template>
+              <template #default="{ row }">¥{{ row.pricePerHour || 0 }}</template>
             </el-table-column>
             <el-table-column label="状态" min-width="160">
-              <template #default="scope">
-                <el-tag class="status-tag" :type="getStatusType(scope.row.status)">
-                  {{ getStatusText(scope.row.status) }}
+              <template #default="{ row }">
+                <el-tag class="status-tag" :type="getStatusType(row.status)">
+                  {{ getStatusText(row.status) }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="处理备注" min-width="180" show-overflow-tooltip>
-              <template #default="scope">
-                {{ scope.row.notes || '无' }}
-              </template>
+              <template #default="{ row }">{{ row.notes || '无' }}</template>
             </el-table-column>
             <el-table-column label="更新时间" min-width="170">
-              <template #default="scope">
-                {{ formatDateTime(scope.row.updatedAt) }}
-              </template>
+              <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
             </el-table-column>
             <el-table-column label="操作" min-width="220" fixed="right">
-              <template #default="scope">
-                <el-button type="primary" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="openDetailDialog(row)">详情</el-button>
                 <el-button
                   type="danger"
                   size="small"
-                  :disabled="!canForceClose(scope.row)"
-                  @click="forceCloseAppointment(scope.row)"
+                  :disabled="!canForceClose(row)"
+                  @click="forceCloseAppointment(row)"
                 >
                   强制关闭
                 </el-button>
@@ -167,7 +157,6 @@
             </el-descriptions>
 
             <el-divider content-position="left">学生信息</el-divider>
-
             <el-descriptions :column="2" border>
               <el-descriptions-item label="学生姓名">
                 {{ selectedAppointment.studentName || '未填写' }}
@@ -192,10 +181,9 @@
               </el-descriptions-item>
             </el-descriptions>
 
-            <el-divider content-position="left">老师信息</el-divider>
-
+            <el-divider content-position="left">教师信息</el-divider>
             <el-descriptions :column="2" border>
-              <el-descriptions-item label="老师姓名">
+              <el-descriptions-item label="教师姓名">
                 {{ selectedAppointment.teacherName || '未填写' }}
               </el-descriptions-item>
               <el-descriptions-item label="学校">
@@ -213,17 +201,15 @@
             </el-descriptions>
 
             <el-divider content-position="left">管理员处理</el-divider>
-
             <el-form :model="processingForm" label-width="100px">
               <el-form-item label="处理状态">
                 <el-select v-model="processingForm.status" style="width: 100%">
-                  <el-option label="待处理" value="PENDING" />
-                  <el-option label="已接受" value="ACCEPTED" />
-                  <el-option label="试课已完成" value="COMPLETED" />
-                  <el-option label="试课已拒绝" value="REJECTED" />
-                  <el-option label="已确认长期合作" value="LONG_TERM_CONFIRMED" />
-                  <el-option label="长期授课已完成" value="LONG_TERM_COMPLETED" />
-                  <el-option label="已拒绝长期合作" value="LONG_TERM_REJECTED" />
+                  <el-option
+                    v-for="option in statusOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
                 </el-select>
               </el-form-item>
               <el-form-item label="处理备注">
@@ -256,7 +242,17 @@
 
 <script>
 import { adminApi } from '../../api/api';
-import { User, DataLine, Calendar, SwitchButton, Comment } from '@element-plus/icons-vue';
+import { User, DataLine, Calendar, SwitchButton, Comment, Document } from '@element-plus/icons-vue';
+
+const STATUS_OPTIONS = [
+  { label: '待处理', value: 'PENDING' },
+  { label: '已接受', value: 'ACCEPTED' },
+  { label: '试课已完成', value: 'COMPLETED' },
+  { label: '试课已拒绝', value: 'REJECTED' },
+  { label: '已确认长期合作', value: 'LONG_TERM_CONFIRMED' },
+  { label: '长期授课已完成', value: 'LONG_TERM_COMPLETED' },
+  { label: '已拒绝长期合作', value: 'LONG_TERM_REJECTED' }
+];
 
 export default {
   name: 'AdminAppointmentsView',
@@ -265,6 +261,7 @@ export default {
     DataLine,
     Calendar,
     Comment,
+    Document,
     SwitchButton
   },
   data() {
@@ -272,6 +269,7 @@ export default {
       activeIndex: '3',
       searchQuery: '',
       statusFilter: '',
+      statusOptions: STATUS_OPTIONS,
       appointmentsList: [],
       currentPage: 1,
       pageSize: 10,
@@ -286,13 +284,13 @@ export default {
   computed: {
     filteredAppointments() {
       const keyword = this.searchQuery.trim().toLowerCase();
-      return this.appointmentsList.filter((appointment) => {
+      return this.appointmentsList.filter(appointment => {
         const matchesKeyword = !keyword || [
           String(appointment.id || ''),
           appointment.studentName,
           appointment.teacherName,
           appointment.subject
-        ].some((value) => (value || '').toLowerCase().includes(keyword));
+        ].some(value => (value || '').toLowerCase().includes(keyword));
 
         const matchesStatus = !this.statusFilter || appointment.status === this.statusFilter;
         return matchesKeyword && matchesStatus;
@@ -300,8 +298,7 @@ export default {
     },
     pagedAppointments() {
       const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return this.filteredAppointments.slice(start, end);
+      return this.filteredAppointments.slice(start, start + this.pageSize);
     }
   },
   mounted() {
@@ -320,9 +317,12 @@ export default {
           this.$router.push('/admin/appointments');
           break;
         case '4':
-          this.$router.push('/admin/evaluations');
+          this.$router.push('/admin/resources');
           break;
         case '5':
+          this.$router.push('/admin/evaluations');
+          break;
+        case '6':
           this.logout();
           break;
       }
@@ -366,19 +366,21 @@ export default {
         if (response?.success === false) {
           throw new Error(response.error || '保存处理失败');
         }
-        this.$message.success(response.message || '保存处理成功');
+        this.$message.success('保存处理成功');
         await this.loadAppointments();
         await this.openDetailDialog({ id: this.selectedAppointment.id });
       } catch (error) {
         console.error('保存处理失败:', error);
-        this.$message.error('保存处理失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('保存处理失败，请稍后重试');
       }
     },
     canForceClose(appointment) {
       return ['PENDING', 'ACCEPTED', 'COMPLETED', 'LONG_TERM_CONFIRMED'].includes(appointment?.status);
     },
     async forceCloseAppointment(appointment, keepDialogOpen = false) {
-      const targetStatus = ['PENDING', 'ACCEPTED'].includes(appointment.status) ? 'REJECTED' : 'LONG_TERM_REJECTED';
+      const targetStatus = ['PENDING', 'ACCEPTED'].includes(appointment.status)
+        ? 'REJECTED'
+        : 'LONG_TERM_REJECTED';
       const notes = this.processingForm.notes || appointment.notes || '管理员强制关闭预约';
 
       try {
@@ -398,7 +400,7 @@ export default {
         }
       } catch (error) {
         console.error('强制关闭失败:', error);
-        this.$message.error('强制关闭失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('强制关闭失败，请稍后重试');
       }
     },
     handleSizeChange(size) {
@@ -427,24 +429,7 @@ export default {
       }
     },
     getStatusText(status) {
-      switch (status) {
-        case 'PENDING':
-          return '待处理';
-        case 'ACCEPTED':
-          return '已接受';
-        case 'COMPLETED':
-          return '试课已完成';
-        case 'REJECTED':
-          return '试课已拒绝';
-        case 'LONG_TERM_CONFIRMED':
-          return '已确认长期合作';
-        case 'LONG_TERM_COMPLETED':
-          return '长期授课已完成';
-        case 'LONG_TERM_REJECTED':
-          return '已拒绝长期合作';
-        default:
-          return status || '未知';
-      }
+      return this.statusOptions.find(option => option.value === status)?.label || status || '未知';
     },
     getLongTermStatusText(appointment) {
       if (!appointment) {
@@ -536,7 +521,7 @@ export default {
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -546,15 +531,16 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
+.sidebar-menu :deep(.el-menu-item.is-active) {
   color: #409eff;
   background-color: #263445;
 }

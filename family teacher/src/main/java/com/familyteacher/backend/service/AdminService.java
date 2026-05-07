@@ -6,12 +6,16 @@ import com.familyteacher.backend.entity.Student;
 import com.familyteacher.backend.entity.AppointmentRequest;
 import com.familyteacher.backend.entity.Order;
 import com.familyteacher.backend.entity.Evaluation;
+import com.familyteacher.backend.entity.TeacherJobPost;
+import com.familyteacher.backend.entity.StudentTutoringRequest;
 import com.familyteacher.backend.repository.UserRepository;
 import com.familyteacher.backend.repository.TeacherRepository;
 import com.familyteacher.backend.repository.StudentRepository;
 import com.familyteacher.backend.repository.AppointmentRequestRepository;
 import com.familyteacher.backend.repository.OrderRepository;
 import com.familyteacher.backend.repository.EvaluationRepository;
+import com.familyteacher.backend.repository.TeacherJobPostRepository;
+import com.familyteacher.backend.repository.StudentTutoringRequestRepository;
 import com.familyteacher.backend.service.StudentService;
 import com.familyteacher.backend.service.TeacherService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -47,6 +51,12 @@ public class AdminService {
 
     @Autowired
     private EvaluationRepository evaluationRepository;
+
+    @Autowired
+    private TeacherJobPostRepository teacherJobPostRepository;
+
+    @Autowired
+    private StudentTutoringRequestRepository studentTutoringRequestRepository;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -97,6 +107,42 @@ public class AdminService {
                 ))
                 .map(this::buildAppointmentSummary)
                 .collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getAllJobPosts() {
+        return teacherJobPostRepository.findAll().stream()
+                .sorted(Comparator.comparing(
+                        TeacherJobPost::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ).thenComparing(
+                        TeacherJobPost::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .map(this::buildJobPostSummary)
+                .collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getAllTutoringRequests() {
+        return studentTutoringRequestRepository.findAll().stream()
+                .sorted(Comparator.comparing(
+                        StudentTutoringRequest::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ).thenComparing(
+                        StudentTutoringRequest::getId,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .map(this::buildTutoringRequestSummary)
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getJobPostDetail(Long id) {
+        TeacherJobPost jobPost = teacherJobPostRepository.findById(id).orElse(null);
+        return jobPost == null ? null : buildJobPostSummary(jobPost);
+    }
+
+    public Map<String, Object> getTutoringRequestDetail(Long id) {
+        StudentTutoringRequest request = studentTutoringRequestRepository.findById(id).orElse(null);
+        return request == null ? null : buildTutoringRequestSummary(request);
     }
 
     public Map<String, Object> getAppointmentDetail(Long id) {
@@ -496,5 +542,82 @@ public class AdminService {
     @Transactional
     public Map<String, Object> updateTeacherInfo(Long teacherId, Map<String, Object> profileData) {
         return userService.adminUpdateTeacherProfile(teacherId, profileData);
+    }
+
+    private Map<String, Object> buildJobPostSummary(TeacherJobPost jobPost) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", jobPost.getId());
+        item.put("title", jobPost.getTitle());
+        item.put("description", jobPost.getDescription());
+        item.put("subject", jobPost.getSubject());
+        item.put("pricePerHour", jobPost.getPricePerHour());
+        item.put("location", defaultText(jobPost.getLocationFormatted()));
+        item.put("locationProvince", jobPost.getLocationProvince());
+        item.put("locationCity", jobPost.getLocationCity());
+        item.put("locationDistrict", jobPost.getLocationDistrict());
+        item.put("availability", jobPost.getAvailability());
+        item.put("active", !Boolean.FALSE.equals(jobPost.getActive()));
+        item.put("createdAt", jobPost.getCreatedAt());
+        item.put("updatedAt", jobPost.getUpdatedAt());
+
+        Teacher teacher = jobPost.getTeacher();
+        if (teacher != null) {
+            item.put("teacherId", teacher.getId());
+            item.put("teacherSchool", defaultText(teacher.getSchool()));
+            item.put("teacherMajor", defaultText(teacher.getMajor()));
+            item.put("teacherSubject", defaultText(teacher.getSubject()));
+            item.put("teacherEducation", defaultText(teacher.getEducation()));
+            item.put("teacherAddress", defaultText(teacher.getAddressFormatted()));
+            if (teacher.getUser() != null) {
+                item.put("teacherUserId", teacher.getUser().getId());
+                item.put("teacherName", defaultText(teacher.getUser().getName()));
+                item.put("teacherPhone", defaultText(teacher.getUser().getPhone()));
+                item.put("teacherEmail", defaultText(teacher.getUser().getEmail()));
+            } else {
+                item.put("teacherUserId", null);
+                item.put("teacherName", "未填写");
+                item.put("teacherPhone", "未填写");
+                item.put("teacherEmail", "未填写");
+            }
+        }
+        return item;
+    }
+
+    private Map<String, Object> buildTutoringRequestSummary(StudentTutoringRequest request) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", request.getId());
+        item.put("title", request.getTitle());
+        item.put("description", request.getDescription());
+        item.put("subject", request.getSubject());
+        item.put("budgetPerHour", request.getBudgetPerHour());
+        item.put("location", defaultText(request.getLocationFormatted()));
+        item.put("locationProvince", request.getLocationProvince());
+        item.put("locationCity", request.getLocationCity());
+        item.put("locationDistrict", request.getLocationDistrict());
+        item.put("preferredTime", request.getPreferredTime());
+        item.put("active", !Boolean.FALSE.equals(request.getActive()));
+        item.put("createdAt", request.getCreatedAt());
+        item.put("updatedAt", request.getUpdatedAt());
+
+        Student student = request.getStudent();
+        if (student != null) {
+            item.put("studentId", student.getId());
+            item.put("studentSchool", defaultText(student.getSchool()));
+            item.put("studentGrade", defaultText(student.getGrade()));
+            item.put("studentMajor", defaultText(student.getMajor()));
+            item.put("studentAddress", defaultText(student.getAddressFormatted()));
+            if (student.getUser() != null) {
+                item.put("studentUserId", student.getUser().getId());
+                item.put("studentName", defaultText(student.getUser().getName()));
+                item.put("studentPhone", defaultText(student.getUser().getPhone()));
+                item.put("studentEmail", defaultText(student.getUser().getEmail()));
+            } else {
+                item.put("studentUserId", null);
+                item.put("studentName", "未填写");
+                item.put("studentPhone", "未填写");
+                item.put("studentEmail", "未填写");
+            }
+        }
+        return item;
     }
 }

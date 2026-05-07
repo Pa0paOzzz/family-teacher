@@ -6,11 +6,7 @@
           <h2>家教平台</h2>
           <p>教师端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
@@ -41,9 +37,11 @@
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-main>
         <div class="profile-container">
           <h2>个人资料</h2>
+
           <div v-if="!isEditing" class="profile-display">
             <el-descriptions :column="1" border>
               <el-descriptions-item label="用户名">{{ teacherForm.username }}</el-descriptions-item>
@@ -56,61 +54,64 @@
               <el-descriptions-item label="教学经验">{{ teacherForm.teachingExperience }}</el-descriptions-item>
               <el-descriptions-item label="擅长学科">{{ teacherForm.subject }}</el-descriptions-item>
               <el-descriptions-item label="个人简介">{{ teacherForm.bio }}</el-descriptions-item>
-              <el-descriptions-item label="价格/小时">{{ teacherForm.pricePerHour }}</el-descriptions-item>
-              <el-descriptions-item label="地址">{{ teacherForm.addressFormatted || teacherForm.address }}</el-descriptions-item>
+              <el-descriptions-item label="价格/小时">¥{{ teacherForm.pricePerHour }}</el-descriptions-item>
+              <el-descriptions-item label="地区">
+                {{ teacherForm.addressFormatted || teacherForm.address }}
+              </el-descriptions-item>
             </el-descriptions>
             <div class="button-group">
               <el-button type="primary" @click="startEditing">修改个人信息</el-button>
             </div>
           </div>
-          <el-form v-else :model="teacherForm" :rules="rules" ref="teacherFormRef" label-width="100px">
+
+          <el-form
+            v-else
+            ref="teacherFormRef"
+            :model="teacherForm"
+            :rules="rules"
+            label-width="100px"
+          >
             <el-form-item label="用户名">
-              <el-input v-model="teacherForm.username" disabled></el-input>
+              <el-input v-model="teacherForm.username" disabled />
             </el-form-item>
             <el-form-item label="姓名" prop="name">
-              <el-input v-model="teacherForm.name"></el-input>
+              <el-input v-model="teacherForm.name" />
             </el-form-item>
             <el-form-item label="邮箱" prop="email">
-              <el-input v-model="teacherForm.email"></el-input>
+              <el-input v-model="teacherForm.email" />
             </el-form-item>
             <el-form-item label="手机号" prop="phone">
-              <el-input v-model="teacherForm.phone"></el-input>
+              <el-input v-model="teacherForm.phone" />
             </el-form-item>
             <el-form-item label="学校" prop="school">
-              <el-input v-model="teacherForm.school"></el-input>
+              <el-input v-model="teacherForm.school" />
             </el-form-item>
             <el-form-item label="专业" prop="major">
-              <el-input v-model="teacherForm.major"></el-input>
+              <el-input v-model="teacherForm.major" />
             </el-form-item>
             <el-form-item label="学历" prop="education">
-              <el-input v-model="teacherForm.education"></el-input>
+              <el-input v-model="teacherForm.education" />
             </el-form-item>
             <el-form-item label="教学经验" prop="teachingExperience">
-              <el-input v-model="teacherForm.teachingExperience" type="textarea" rows="3"></el-input>
+              <el-input v-model="teacherForm.teachingExperience" type="textarea" rows="3" />
             </el-form-item>
             <el-form-item label="擅长学科" prop="subject">
               <el-select v-model="teacherForm.subject" placeholder="请选择学科" style="width: 100%">
-                <el-option label="语文" value="语文"></el-option>
-                <el-option label="数学" value="数学"></el-option>
-                <el-option label="英语" value="英语"></el-option>
-                <el-option label="政治" value="政治"></el-option>
-                <el-option label="历史" value="历史"></el-option>
-                <el-option label="地理" value="地理"></el-option>
-                <el-option label="化学" value="化学"></el-option>
-                <el-option label="生物" value="生物"></el-option>
-                <el-option label="物理" value="物理"></el-option>
-                <el-option label="信息技术" value="信息技术"></el-option>
-                <el-option label="美术" value="美术"></el-option>
-                <el-option label="音乐" value="音乐"></el-option>
+                <el-option
+                  v-for="subject in subjectOptions"
+                  :key="subject"
+                  :label="subject"
+                  :value="subject"
+                />
               </el-select>
             </el-form-item>
             <el-form-item label="个人简介" prop="bio">
-              <el-input v-model="teacherForm.bio" type="textarea" rows="4"></el-input>
+              <el-input v-model="teacherForm.bio" type="textarea" rows="4" />
             </el-form-item>
             <el-form-item label="价格/小时" prop="pricePerHour">
-              <el-input v-model.number="teacherForm.pricePerHour" type="number"></el-input>
+              <el-input-number v-model="teacherForm.pricePerHour" :min="0" :precision="0" style="width: 100%" />
             </el-form-item>
-            <el-form-item label="地址" prop="addressDistrict">
+            <el-form-item label="地区" prop="addressDistrict">
               <LocationSelector
                 :province="teacherForm.addressProvince"
                 :city="teacherForm.addressCity"
@@ -118,8 +119,8 @@
                 @update="updateAddress"
               />
             </el-form-item>
-            <el-form-item v-if="teacherForm.addressFormatted" label="已选地址">
-              <el-input :model-value="teacherForm.addressFormatted" disabled></el-input>
+            <el-form-item v-if="teacherForm.addressFormatted" label="已选地区">
+              <el-input :model-value="teacherForm.addressFormatted" disabled />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveProfile">保存修改</el-button>
@@ -135,6 +136,7 @@
 <script>
 import { userApi } from '../../api/api';
 import LocationSelector from '../../components/LocationSelector.vue';
+import { SUBJECT_OPTIONS } from '../../utils/formOptions';
 import { buildLocationPayload, normalizeLocationFields } from '../../utils/location';
 import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
@@ -176,51 +178,32 @@ export default {
       activeIndex: '2',
       isEditing: false,
       originalForm: null,
+      subjectOptions: SUBJECT_OPTIONS,
       teacherForm: createEmptyTeacherForm(),
       rules: {
-        name: [
-          { required: true, message: '请输入姓名', trigger: 'blur' }
-        ],
+        name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
         email: [
           { required: true, message: '请输入邮箱', trigger: 'blur' },
           { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
         ],
-        phone: [
-          { required: true, message: '请输入手机号', trigger: 'blur' }
-        ],
-        school: [
-          { required: true, message: '请输入学校', trigger: 'blur' }
-        ],
-        major: [
-          { required: true, message: '请输入专业', trigger: 'blur' }
-        ],
-        education: [
-          { required: true, message: '请输入学历', trigger: 'blur' }
-        ],
-        teachingExperience: [
-          { required: true, message: '请输入教学经验', trigger: 'blur' }
-        ],
-        subject: [
-          { required: true, message: '请输入擅长学科', trigger: 'blur' }
-        ],
-        bio: [
-          { required: true, message: '请输入个人简介', trigger: 'blur' }
-        ],
-        pricePerHour: [
-          { required: true, message: '请输入价格/小时', trigger: 'blur' }
-        ],
-        addressDistrict: [
-          { required: true, message: '请选择区', trigger: 'change' }
-        ]
+        phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
+        school: [{ required: true, message: '请输入学校', trigger: 'blur' }],
+        major: [{ required: true, message: '请输入专业', trigger: 'blur' }],
+        education: [{ required: true, message: '请输入学历', trigger: 'blur' }],
+        teachingExperience: [{ required: true, message: '请输入教学经验', trigger: 'blur' }],
+        subject: [{ required: true, message: '请选择擅长学科', trigger: 'change' }],
+        bio: [{ required: true, message: '请输入个人简介', trigger: 'blur' }],
+        pricePerHour: [{ required: true, message: '请输入价格/小时', trigger: 'change' }],
+        addressDistrict: [{ required: true, message: '请选择地区', trigger: 'change' }]
       }
-    }
+    };
   },
   mounted() {
     this.loadProfile();
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/teacher/home');
           break;
@@ -254,12 +237,10 @@ export default {
       });
     },
     startEditing() {
-      // 保存原始数据用于取消时恢复
       this.originalForm = { ...this.teacherForm };
       this.isEditing = true;
     },
     cancelEdit() {
-      // 恢复原始数据
       if (this.originalForm) {
         this.teacherForm = { ...this.originalForm };
       }
@@ -289,33 +270,31 @@ export default {
       }
     },
     async saveProfile() {
-      this.$refs.teacherFormRef.validate(async (valid) => {
-        if (valid) {
-          try {
-            await userApi.updateTeacherProfile({
-              name: this.teacherForm.name,
-              email: this.teacherForm.email,
-              phone: this.teacherForm.phone,
-              school: this.teacherForm.school,
-              major: this.teacherForm.major,
-              education: this.teacherForm.education,
-              teachingExperience: this.teacherForm.teachingExperience,
-              subject: this.teacherForm.subject,
-              bio: this.teacherForm.bio,
-              pricePerHour: this.teacherForm.pricePerHour,
-              ...buildLocationPayload('address', this.teacherForm)
-            });
-            this.$message.success('保存成功');
-            this.isEditing = false;
-            // 重新加载最新数据
-            await this.loadProfile();
-          } catch (error) {
-            console.error('保存个人资料失败:', error);
-            this.$message.error('保存失败: ' + (error.response?.data?.error || error.message));
-          }
-        } else {
-          console.log('个人资料表单验证失败');
-          return false;
+      this.$refs.teacherFormRef.validate(async valid => {
+        if (!valid) {
+          return;
+        }
+
+        try {
+          await userApi.updateTeacherProfile({
+            name: this.teacherForm.name,
+            email: this.teacherForm.email,
+            phone: this.teacherForm.phone,
+            school: this.teacherForm.school,
+            major: this.teacherForm.major,
+            education: this.teacherForm.education,
+            teachingExperience: this.teacherForm.teachingExperience,
+            subject: this.teacherForm.subject,
+            bio: this.teacherForm.bio,
+            pricePerHour: this.teacherForm.pricePerHour,
+            ...buildLocationPayload('address', this.teacherForm)
+          });
+          this.$message.success('保存成功');
+          this.isEditing = false;
+          await this.loadProfile();
+        } catch (error) {
+          console.error('保存个人资料失败:', error);
+          this.$message.error('保存失败，请稍后重试');
         }
       });
     },
@@ -326,7 +305,7 @@ export default {
       this.$router.push('/login');
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -361,12 +340,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -376,16 +355,17 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  color: #409EFF;
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  color: #409eff;
   background-color: #263445;
 }
 
@@ -397,7 +377,7 @@ export default {
 }
 
 .profile-display {
-  max-width: 600px;
+  max-width: 720px;
   margin: 0 auto;
 }
 

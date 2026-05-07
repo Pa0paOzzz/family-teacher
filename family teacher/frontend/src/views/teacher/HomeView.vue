@@ -1,19 +1,18 @@
 <template>
   <div class="teacher-home">
     <el-container style="height: 100vh;">
-
       <el-aside width="200px" class="sidebar">
         <div class="logo">
           <h2>家教平台</h2>
           <p>教师端</p>
         </div>
         <el-menu
-            :default-active="activeIndex"
-            class="sidebar-menu"
-            @select="handleMenuSelect"
-            background-color="#304156"
-            text-color="#bfcbd9"
-            active-text-color="#409EFF"
+          :default-active="activeIndex"
+          class="sidebar-menu"
+          @select="handleMenuSelect"
+          background-color="#304156"
+          text-color="#bfcbd9"
+          active-text-color="#409EFF"
         >
           <el-menu-item index="1">
             <el-icon><HomeFilled /></el-icon>
@@ -49,24 +48,24 @@
       <el-main class="main-content">
         <div class="search-container">
           <el-select
-              v-model="searchSubject"
-              placeholder="选择学科"
-              clearable
-              style="width: 200px; margin-right: 10px;"
+            v-model="searchSubject"
+            placeholder="选择学科"
+            clearable
+            class="subject-select"
           >
-            <el-option label="语文" value="语文"></el-option>
-            <el-option label="数学" value="数学"></el-option>
-            <el-option label="英语" value="英语"></el-option>
-            <el-option label="政治" value="政治"></el-option>
-            <el-option label="历史" value="历史"></el-option>
-            <el-option label="地理" value="地理"></el-option>
-            <el-option label="化学" value="化学"></el-option>
-            <el-option label="生物" value="生物"></el-option>
-            <el-option label="物理" value="物理"></el-option>
-            <el-option label="信息技术" value="信息技术"></el-option>
-            <el-option label="美术" value="美术"></el-option>
-            <el-option label="音乐" value="音乐"></el-option>
+            <el-option
+              v-for="subject in subjectOptions"
+              :key="subject"
+              :label="subject"
+              :value="subject"
+            />
           </el-select>
+          <LocationSelector
+            :province="searchLocation.province"
+            :city="searchLocation.city"
+            :district="searchLocation.district"
+            @update="updateSearchLocation"
+          />
           <el-button type="primary" @click="searchRequests">搜索</el-button>
           <el-button @click="resetSearch">重置</el-button>
         </div>
@@ -74,7 +73,7 @@
         <div class="requests-container">
           <h2>学生需求信息</h2>
           <el-row :gutter="20">
-            <el-col :span="8" v-for="request in requestList" :key="request.id">
+            <el-col v-for="request in requestList" :key="request.id" :span="8">
               <el-card class="request-card" shadow="hover">
                 <template #header>
                   <div class="card-header">
@@ -82,11 +81,12 @@
                     <el-tag type="primary">{{ request.subject }}</el-tag>
                   </div>
                 </template>
+
                 <div class="card-content">
                   <p class="description">{{ request.description }}</p>
                   <div class="info-row">
                     <el-icon><User /></el-icon>
-                    <span>{{ request.student?.user?.name || '未知' }}</span>
+                    <span>{{ getStudentName(request) }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><School /></el-icon>
@@ -94,14 +94,14 @@
                   </div>
                   <div class="info-row">
                     <el-icon><Location /></el-icon>
-                    <span>{{ getLocationText(request) }}</span>
+                    <span>{{ getLocationText(request) || '未填写地区' }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><Clock /></el-icon>
-                    <span>{{ request.preferredTime }}</span>
+                    <span>{{ request.preferredTime || '未填写时间' }}</span>
                   </div>
                   <div class="budget-row">
-                    <span class="budget">预算: ¥{{ request.budgetPerHour }}/小时</span>
+                    <span class="budget">预算: ¥{{ request.budgetPerHour || 0 }}/小时</span>
                     <div class="action-buttons">
                       <el-button type="info" size="small" plain @click="openDetailDialog(request)">详情</el-button>
                       <el-button
@@ -113,40 +113,63 @@
                       >
                         {{ isFavorited(request.id) ? '取消收藏' : '收藏' }}
                       </el-button>
-                      <el-button type="primary" size="small" @click="openContactDialog(request)">联系学生</el-button>
+                      <el-button type="primary" size="small" @click="openContactDialog(request)">预约学生</el-button>
                     </div>
                   </div>
                 </div>
               </el-card>
             </el-col>
           </el-row>
-          <el-empty v-if="requestList.length === 0" :description="emptyDescription"></el-empty>
+
+          <el-empty v-if="requestList.length === 0" :description="emptyDescription" />
         </div>
 
         <el-dialog v-model="contactDialogVisible" title="预约学生" width="600px">
           <el-form :model="contactForm" label-width="100px">
             <el-form-item label="学生姓名">
-              <el-input :value="selectedRequest?.student?.user?.name" disabled></el-input>
+              <el-input :value="getStudentName(selectedRequest)" disabled />
             </el-form-item>
             <el-form-item label="学科">
-              <el-input :value="selectedRequest?.subject" disabled></el-input>
+              <el-input :value="selectedRequest?.subject" disabled />
             </el-form-item>
             <el-form-item label="预约时间" required>
               <el-date-picker
                 v-model="contactForm.appointmentTime"
                 type="datetime"
                 placeholder="选择预约时间"
+                :value-format="datetimeValueFormat"
+                :format="datetimeDisplayFormat"
                 style="width: 100%"
-              ></el-date-picker>
+              />
             </el-form-item>
-            <el-form-item label="上课地点" required>
-              <el-input v-model="contactForm.location" placeholder="请输入上课地点"></el-input>
+            <el-form-item label="上课地区" required>
+              <LocationSelector
+                :province="contactForm.locationProvince"
+                :city="contactForm.locationCity"
+                :district="contactForm.locationDistrict"
+                @update="updateAppointmentLocation"
+              />
+            </el-form-item>
+            <el-form-item v-if="contactForm.locationFormatted" label="已选地区">
+              <el-input :model-value="contactForm.locationFormatted" disabled />
             </el-form-item>
             <el-form-item label="价格/小时" required>
-              <el-input-number v-model="contactForm.pricePerHour" :min="0" :precision="2" :step="10" style="width: 100%" placeholder="请输入每小时价格"></el-input-number>
+              <el-input-number
+                v-model="contactForm.pricePerHour"
+                :min="0"
+                :precision="2"
+                :step="10"
+                style="width: 100%"
+                placeholder="请输入每小时价格"
+              />
             </el-form-item>
             <el-form-item label="留言">
-              <el-input v-model="contactForm.message" type="textarea" rows="3" placeholder="请输入留言内容"></el-input>
+              <el-input
+                v-model="contactForm.message"
+                type="textarea"
+                rows="3"
+                placeholder="请输入留言内容"
+              />
             </el-form-item>
           </el-form>
           <template #footer>
@@ -161,7 +184,7 @@
               {{ selectedRequest?.title || '未填写' }}
             </el-descriptions-item>
             <el-descriptions-item label="学生姓名">
-              {{ selectedRequest?.student?.user?.name || '未填写' }}
+              {{ getStudentName(selectedRequest) }}
             </el-descriptions-item>
             <el-descriptions-item label="学科">
               {{ selectedRequest?.subject || '未填写' }}
@@ -184,13 +207,13 @@
             <el-descriptions-item label="预算/小时">
               ¥{{ selectedRequest?.budgetPerHour || 0 }}
             </el-descriptions-item>
-            <el-descriptions-item label="地点" :span="2">
+            <el-descriptions-item label="地区" :span="2">
               {{ getLocationText(selectedRequest) || '未填写' }}
             </el-descriptions-item>
             <el-descriptions-item label="期望时间" :span="2">
               {{ selectedRequest?.preferredTime || '未填写' }}
             </el-descriptions-item>
-            <el-descriptions-item label="地址" :span="2">
+            <el-descriptions-item label="详细地址" :span="2">
               {{ getAddressText(selectedRequest?.student) || '未填写' }}
             </el-descriptions-item>
             <el-descriptions-item label="需求描述" :span="2">
@@ -200,7 +223,7 @@
 
           <template #footer>
             <el-button @click="detailDialogVisible = false">关闭</el-button>
-            <el-button type="primary" @click="contactFromDetail">联系学生</el-button>
+            <el-button type="primary" @click="contactFromDetail">立即预约</el-button>
           </template>
         </el-dialog>
       </el-main>
@@ -210,8 +233,34 @@
 
 <script>
 import { recommendationApi, tutoringRequestApi, appointmentApi, favoriteApi, userApi } from '../../api/api';
-import { getDisplayLocation } from '../../utils/location';
-import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+import LocationSelector from '../../components/LocationSelector.vue';
+import { getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { DATETIME_DISPLAY_FORMAT, DATETIME_VALUE_FORMAT, SUBJECT_OPTIONS } from '../../utils/formOptions';
+import {
+  User,
+  School,
+  Location,
+  Clock,
+  HomeFilled,
+  EditPen,
+  Calendar,
+  Star,
+  SwitchButton,
+  Comment
+} from '@element-plus/icons-vue';
+
+function createContactForm() {
+  return {
+    appointmentTime: '',
+    location: '',
+    locationProvince: '',
+    locationCity: '',
+    locationDistrict: '',
+    locationFormatted: '',
+    pricePerHour: null,
+    message: ''
+  };
+}
 
 export default {
   name: 'TeacherHomeView',
@@ -225,12 +274,21 @@ export default {
     Calendar,
     Star,
     SwitchButton,
-    Comment
+    Comment,
+    LocationSelector
   },
   data() {
     return {
       activeIndex: '1',
       searchSubject: '',
+      subjectOptions: SUBJECT_OPTIONS,
+      datetimeValueFormat: DATETIME_VALUE_FORMAT,
+      datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
+      searchLocation: {
+        province: '',
+        city: '',
+        district: ''
+      },
       requestList: [],
       favoriteIds: [],
       favoriteLoadingIds: [],
@@ -238,20 +296,15 @@ export default {
       detailDialogVisible: false,
       selectedRequest: null,
       emptyDescription: '暂无学生推荐',
-      contactForm: {
-        appointmentTime: '',
-        location: '',
-        pricePerHour: null,
-        message: ''
-      }
-    }
+      contactForm: createContactForm()
+    };
   },
   mounted() {
     this.loadRequests();
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/teacher/home');
           break;
@@ -275,6 +328,9 @@ export default {
           break;
       }
     },
+    getStudentName(item) {
+      return item?.student?.user?.name || item?.student?.name || '未知';
+    },
     getLocationText(item) {
       return getDisplayLocation(item, 'location');
     },
@@ -290,21 +346,23 @@ export default {
         ]);
         this.requestList = requests || [];
         this.favoriteIds = (favorites || []).map(favorite => favorite.resourceId).filter(id => id != null);
-        this.emptyDescription = profile?.addressCity ? '暂无学生推荐' : '请先在个人资料中填写所在城市，以优先获取同市学生推荐';
+        this.emptyDescription = profile?.addressCity
+          ? '暂无学生推荐'
+          : '请先在个人资料中填写所在城市，以便优先获取同城学生推荐';
       } catch (error) {
         console.error('加载学生推荐信息失败:', error);
         this.$message.error('加载学生推荐信息失败');
       }
     },
     async searchRequests() {
-      if (!this.searchSubject) {
+      if (!this.hasSearchFilters()) {
         this.loadRequests();
         return;
       }
       try {
         const response = await tutoringRequestApi.getList();
-        this.requestList = (response || []).filter(req =>
-            req.subject === this.searchSubject
+        this.requestList = (response || []).filter(request =>
+          this.matchesSubject(request.subject) && this.matchesLocation(request)
         );
         this.emptyDescription = '暂无学生需求信息';
       } catch (error) {
@@ -314,7 +372,40 @@ export default {
     },
     resetSearch() {
       this.searchSubject = '';
+      this.searchLocation = {
+        province: '',
+        city: '',
+        district: ''
+      };
       this.loadRequests();
+    },
+    updateSearchLocation(location) {
+      this.searchLocation = {
+        province: location.province,
+        city: location.city,
+        district: location.district
+      };
+    },
+    hasSearchFilters() {
+      return Boolean(
+        this.searchSubject ||
+        this.searchLocation.province ||
+        this.searchLocation.city ||
+        this.searchLocation.district
+      );
+    },
+    matchesSubject(subject) {
+      return !this.searchSubject || subject === this.searchSubject;
+    },
+    matchesLocation(item) {
+      const { province, city, district } = this.searchLocation;
+      if (!province && !city && !district) {
+        return true;
+      }
+      const normalized = normalizeLocationFields('location', item);
+      return (!province || normalized.locationProvince === province)
+        && (!city || normalized.locationCity === city)
+        && (!district || normalized.locationDistrict === district);
     },
     isFavorited(resourceId) {
       return this.favoriteIds.includes(resourceId);
@@ -352,19 +443,36 @@ export default {
     },
     openContactDialog(request) {
       this.selectedRequest = request;
+      const location = normalizeLocationFields('location', request || {});
       this.contactForm = {
         appointmentTime: '',
-        location: request?.locationFormatted || request?.location || '',
+        location: location.locationFormatted || location.location || '',
+        locationProvince: location.locationProvince || '',
+        locationCity: location.locationCity || '',
+        locationDistrict: location.locationDistrict || '',
+        locationFormatted: location.locationFormatted || '',
         pricePerHour: request?.budgetPerHour || null,
         message: ''
       };
       this.contactDialogVisible = true;
+    },
+    updateAppointmentLocation(location) {
+      Object.assign(this.contactForm, {
+        location: location.formatted,
+        locationProvince: location.province,
+        locationCity: location.city,
+        locationDistrict: location.district,
+        locationFormatted: location.formatted
+      });
     },
     openDetailDialog(request) {
       this.selectedRequest = request;
       this.detailDialogVisible = true;
     },
     contactFromDetail() {
+      if (!this.selectedRequest) {
+        return;
+      }
       this.detailDialogVisible = false;
       this.openContactDialog(this.selectedRequest);
     },
@@ -373,12 +481,12 @@ export default {
         this.$message.warning('请选择预约时间');
         return;
       }
-      if (!this.contactForm.location) {
-        this.$message.warning('请输入上课地点');
+      if (!this.contactForm.locationDistrict) {
+        this.$message.warning('请选择上课地区');
         return;
       }
-      if (this.contactForm.pricePerHour == null) {
-        this.$message.warning('请输入价格/小时');
+      if (this.contactForm.pricePerHour == null || this.contactForm.pricePerHour <= 0) {
+        this.$message.warning('请输入有效的价格');
         return;
       }
       try {
@@ -392,15 +500,10 @@ export default {
         });
         this.$message.success('预约成功');
         this.contactDialogVisible = false;
-        this.contactForm = {
-          appointmentTime: '',
-          location: '',
-          pricePerHour: null,
-          message: ''
-        };
+        this.contactForm = createContactForm();
       } catch (error) {
         console.error('预约失败:', error);
-        this.$message.error('预约失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('预约失败，请稍后重试');
       }
     },
     logout() {
@@ -410,7 +513,7 @@ export default {
       this.$router.push('/login');
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -437,12 +540,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -461,26 +564,33 @@ export default {
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  color: #409EFF;
+  color: #409eff;
   background-color: #263445;
 }
 
 .main-content {
   padding: 20px;
   margin-left: 0;
+  overflow-y: auto;
 }
 
 .search-container {
   margin-bottom: 30px;
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.subject-select {
+  width: 200px;
 }
 
 .requests-container {
   background-color: white;
   padding: 30px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 10%);
 }
 
 .requests-container h2 {
@@ -497,7 +607,7 @@ export default {
 
 .request-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
 }
 
 .card-header {
@@ -516,7 +626,7 @@ export default {
   font-size: 14px;
 }
 
-.card-content .description {
+.description {
   color: #606266;
   line-height: 1.6;
   margin-bottom: 15px;
@@ -528,7 +638,6 @@ export default {
   align-items: center;
   margin-bottom: 10px;
   color: #606266;
-  font-size: 14px;
 }
 
 .info-row .el-icon {
@@ -540,25 +649,27 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #ebeef5;
 }
 
-.budget-row .budget {
-  font-size: 20px;
+.budget {
+  font-size: 18px;
   font-weight: bold;
-  color: #409EFF;
+  color: #67c23a;
 }
 
 .action-buttons {
   display: flex;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 10px;
+  justify-content: flex-end;
 }
 
 .detail-text {
-  line-height: 1.6;
   white-space: pre-wrap;
+  line-height: 1.7;
 }
 </style>

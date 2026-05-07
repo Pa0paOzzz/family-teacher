@@ -6,11 +6,7 @@
           <h2>家教平台</h2>
           <p>学生端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
@@ -41,11 +37,12 @@
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-main>
         <div class="favorites-container">
           <h2>我的收藏</h2>
           <el-row :gutter="20">
-            <el-col :span="8" v-for="favorite in favoriteList" :key="favorite.id">
+            <el-col v-for="favorite in favoriteList" :key="favorite.id" :span="8">
               <el-card class="favorite-card" shadow="hover">
                 <template #header>
                   <div class="card-header">
@@ -53,11 +50,12 @@
                     <el-tag type="success">{{ favorite.resource?.subject || '未知学科' }}</el-tag>
                   </div>
                 </template>
+
                 <div class="card-content">
                   <p class="description">{{ favorite.resource?.description || '暂无描述' }}</p>
                   <div class="info-row">
                     <el-icon><User /></el-icon>
-                    <span>{{ favorite.resource?.teacher?.name || '未知' }}</span>
+                    <span>{{ getTeacherName(favorite.resource) }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><School /></el-icon>
@@ -65,7 +63,7 @@
                   </div>
                   <div class="info-row">
                     <el-icon><Location /></el-icon>
-                    <span>{{ getLocationText(favorite.resource) || '未知地点' }}</span>
+                    <span>{{ getLocationText(favorite.resource) || '未知地区' }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><Clock /></el-icon>
@@ -73,7 +71,7 @@
                   </div>
                   <div class="price-row">
                     <span class="price">¥{{ favorite.resource?.pricePerHour || 0 }}/小时</span>
-                    <div>
+                    <div class="action-buttons">
                       <el-button type="primary" size="small" @click="openAppointmentDialog(favorite)">预约</el-button>
                       <el-button type="danger" size="small" @click="removeFavorite(favorite)">取消收藏</el-button>
                     </div>
@@ -82,33 +80,56 @@
               </el-card>
             </el-col>
           </el-row>
-          <el-empty v-if="favoriteList.length === 0" description="暂无收藏"></el-empty>
+
+          <el-empty v-if="favoriteList.length === 0" description="暂无收藏" />
         </div>
 
         <el-dialog v-model="appointmentDialogVisible" title="预约教师" width="600px">
           <el-form :model="appointmentForm" label-width="100px">
             <el-form-item label="老师姓名">
-              <el-input :value="selectedFavorite?.resource?.teacher?.name" disabled></el-input>
+              <el-input :value="getTeacherName(selectedFavorite?.resource)" disabled />
             </el-form-item>
             <el-form-item label="学科">
-              <el-input :value="selectedFavorite?.resource?.subject" disabled></el-input>
+              <el-input :value="selectedFavorite?.resource?.subject" disabled />
             </el-form-item>
             <el-form-item label="预约时间" required>
               <el-date-picker
                 v-model="appointmentForm.appointmentTime"
                 type="datetime"
                 placeholder="选择预约时间"
+                :value-format="datetimeValueFormat"
+                :format="datetimeDisplayFormat"
                 style="width: 100%"
-              ></el-date-picker>
+              />
             </el-form-item>
-            <el-form-item label="上课地点" required>
-              <el-input v-model="appointmentForm.location" placeholder="请输入上课地点"></el-input>
+            <el-form-item label="上课地区" required>
+              <LocationSelector
+                :province="appointmentForm.locationProvince"
+                :city="appointmentForm.locationCity"
+                :district="appointmentForm.locationDistrict"
+                @update="updateAppointmentLocation"
+              />
+            </el-form-item>
+            <el-form-item v-if="appointmentForm.locationFormatted" label="已选地区">
+              <el-input :model-value="appointmentForm.locationFormatted" disabled />
             </el-form-item>
             <el-form-item label="价格/小时" required>
-              <el-input-number v-model="appointmentForm.pricePerHour" :min="0" :precision="2" :step="10" style="width: 100%" placeholder="请输入每小时价格"></el-input-number>
+              <el-input-number
+                v-model="appointmentForm.pricePerHour"
+                :min="0"
+                :precision="2"
+                :step="10"
+                style="width: 100%"
+                placeholder="请输入每小时价格"
+              />
             </el-form-item>
             <el-form-item label="备注">
-              <el-input v-model="appointmentForm.remark" type="textarea" rows="3" placeholder="请输入备注信息"></el-input>
+              <el-input
+                v-model="appointmentForm.remark"
+                type="textarea"
+                rows="3"
+                placeholder="请输入备注信息"
+              />
             </el-form-item>
           </el-form>
           <template #footer>
@@ -123,8 +144,34 @@
 
 <script>
 import { favoriteApi, appointmentApi } from '../../api/api';
-import { getDisplayLocation } from '../../utils/location';
-import { User, School, Location, Clock, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+import LocationSelector from '../../components/LocationSelector.vue';
+import { getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { DATETIME_DISPLAY_FORMAT, DATETIME_VALUE_FORMAT } from '../../utils/formOptions';
+import {
+  User,
+  School,
+  Location,
+  Clock,
+  HomeFilled,
+  EditPen,
+  Calendar,
+  Star,
+  SwitchButton,
+  Comment
+} from '@element-plus/icons-vue';
+
+function createAppointmentForm() {
+  return {
+    appointmentTime: '',
+    location: '',
+    locationProvince: '',
+    locationCity: '',
+    locationDistrict: '',
+    locationFormatted: '',
+    pricePerHour: null,
+    remark: ''
+  };
+}
 
 export default {
   name: 'StudentFavoritesView',
@@ -138,28 +185,26 @@ export default {
     Calendar,
     Star,
     SwitchButton,
-    Comment
+    Comment,
+    LocationSelector
   },
   data() {
     return {
       activeIndex: '5',
+      datetimeValueFormat: DATETIME_VALUE_FORMAT,
+      datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
       favoriteList: [],
       appointmentDialogVisible: false,
       selectedFavorite: null,
-      appointmentForm: {
-        appointmentTime: '',
-        location: '',
-        pricePerHour: null,
-        remark: ''
-      }
-    }
+      appointmentForm: createAppointmentForm()
+    };
   },
   mounted() {
     this.loadFavorites();
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/student/home');
           break;
@@ -182,6 +227,9 @@ export default {
           this.logout();
           break;
       }
+    },
+    getTeacherName(item) {
+      return item?.teacher?.user?.name || item?.teacher?.name || '未知';
     },
     getLocationText(item) {
       return getDisplayLocation(item, 'location');
@@ -210,15 +258,35 @@ export default {
     },
     openAppointmentDialog(favorite) {
       this.selectedFavorite = favorite;
+      const location = normalizeLocationFields('location', favorite?.resource || {});
+      this.appointmentForm = {
+        appointmentTime: '',
+        location: location.locationFormatted || location.location || '',
+        locationProvince: location.locationProvince || '',
+        locationCity: location.locationCity || '',
+        locationDistrict: location.locationDistrict || '',
+        locationFormatted: location.locationFormatted || '',
+        pricePerHour: favorite?.resource?.pricePerHour || null,
+        remark: ''
+      };
       this.appointmentDialogVisible = true;
+    },
+    updateAppointmentLocation(location) {
+      Object.assign(this.appointmentForm, {
+        location: location.formatted,
+        locationProvince: location.province,
+        locationCity: location.city,
+        locationDistrict: location.district,
+        locationFormatted: location.formatted
+      });
     },
     async submitAppointment() {
       if (!this.appointmentForm.appointmentTime) {
         this.$message.warning('请选择预约时间');
         return;
       }
-      if (!this.appointmentForm.location) {
-        this.$message.warning('请输入上课地点');
+      if (!this.appointmentForm.locationDistrict) {
+        this.$message.warning('请选择上课地区');
         return;
       }
       if (!this.appointmentForm.pricePerHour || this.appointmentForm.pricePerHour <= 0) {
@@ -227,8 +295,8 @@ export default {
       }
       try {
         await appointmentApi.create({
-          teacherId: this.selectedFavorite.resource?.teacher?.id,
-          subject: this.selectedFavorite.resource?.subject,
+          teacherId: this.selectedFavorite?.resource?.teacher?.id,
+          subject: this.selectedFavorite?.resource?.subject,
           appointmentTime: this.appointmentForm.appointmentTime,
           location: this.appointmentForm.location,
           pricePerHour: this.appointmentForm.pricePerHour,
@@ -236,15 +304,10 @@ export default {
         });
         this.$message.success('预约成功');
         this.appointmentDialogVisible = false;
-        this.appointmentForm = {
-          appointmentTime: '',
-          location: '',
-          pricePerHour: null,
-          remark: ''
-        };
+        this.appointmentForm = createAppointmentForm();
       } catch (error) {
         console.error('预约失败:', error);
-        this.$message.error('预约失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('预约失败，请稍后重试');
       }
     },
     logout() {
@@ -254,7 +317,7 @@ export default {
       this.$router.push('/login');
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -289,12 +352,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -302,11 +365,6 @@ export default {
 .sidebar-menu {
   border: none;
   background-color: #304156;
-}
-
-.sidebar-menu .el-menu-item.is-active {
-  color: #409EFF;
-  background-color: #263445;
 }
 
 .sidebar-menu :deep(.el-menu-item) {
@@ -319,7 +377,7 @@ export default {
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  color: #409EFF;
+  color: #409eff;
   background-color: #263445;
 }
 
@@ -346,7 +404,7 @@ export default {
 
 .favorite-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
 }
 
 .card-header {
@@ -365,7 +423,7 @@ export default {
   font-size: 14px;
 }
 
-.card-content .description {
+.description {
   color: #606266;
   line-height: 1.6;
   margin-bottom: 15px;
@@ -377,7 +435,6 @@ export default {
   align-items: center;
   margin-bottom: 10px;
   color: #606266;
-  font-size: 14px;
 }
 
 .info-row .el-icon {
@@ -392,11 +449,19 @@ export default {
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #ebeef5;
+  gap: 12px;
 }
 
-.price-row .price {
+.price {
   font-size: 20px;
   font-weight: bold;
   color: #f56c6c;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 </style>

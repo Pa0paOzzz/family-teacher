@@ -6,11 +6,7 @@
           <h2>家教平台</h2>
           <p>学生端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
@@ -25,7 +21,7 @@
           </el-menu-item>
           <el-menu-item index="4">
             <el-icon><Calendar /></el-icon>
-            <span>我的试课</span>
+            <span>我的预约</span>
           </el-menu-item>
           <el-menu-item index="5">
             <el-icon><Star /></el-icon>
@@ -41,89 +37,117 @@
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-main>
         <div class="appointments-container">
           <h2>试课 / 面试记录</h2>
           <el-tabs type="border-card">
             <el-tab-pane label="待处理">
               <el-table :data="pendingAppointments" style="width: 100%">
-                <el-table-column prop="teacherName" label="老师"></el-table-column>
-                <el-table-column prop="subject" label="学科"></el-table-column>
-                <el-table-column prop="requestedDate" label="日期"></el-table-column>
-                <el-table-column prop="requestedTime" label="时间"></el-table-column>
-                <el-table-column prop="location" label="地点"></el-table-column>
-                <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
+                <el-table-column prop="teacherName" label="老师" />
+                <el-table-column prop="subject" label="学科" />
+                <el-table-column prop="requestedDate" label="日期" />
+                <el-table-column prop="requestedTime" label="时间" />
+                <el-table-column prop="location" label="地点" />
+                <el-table-column prop="pricePerHour" label="试课价/小时" />
                 <el-table-column label="状态" min-width="120">
-                  <template #default="scope">
-                    <el-tag class="status-tag" type="warning">{{ getStatusText(scope.row.status) }}</el-tag>
+                  <template #default="{ row }">
+                    <el-tag class="status-tag" type="warning">{{ getStatusText(row.status) }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作">
-                  <template #default="scope">
-                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
-                    <el-button type="danger" size="small" @click="cancelAppointment(scope.row.id)">取消</el-button>
+                <el-table-column label="操作" min-width="220">
+                  <template #default="{ row }">
+                    <el-button type="info" size="small" @click="openDetailDialog(row)">详情</el-button>
+                    <el-button
+                      v-if="canAcceptAppointment(row)"
+                      type="success"
+                      size="small"
+                      @click="acceptAppointment(row.id)"
+                    >
+                      接受
+                    </el-button>
+                    <el-button
+                      v-if="canRejectAppointment(row)"
+                      type="danger"
+                      size="small"
+                      @click="rejectAppointment(row.id)"
+                    >
+                      拒绝
+                    </el-button>
+                    <el-button
+                      v-if="canCancelAppointment(row)"
+                      type="danger"
+                      size="small"
+                      @click="cancelAppointment(row.id)"
+                    >
+                      取消
+                    </el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
+
             <el-tab-pane label="已接受">
               <el-table :data="acceptedAppointments" style="width: 100%">
-                <el-table-column prop="teacherName" label="老师"></el-table-column>
-                <el-table-column prop="subject" label="学科"></el-table-column>
-                <el-table-column prop="requestedDate" label="日期"></el-table-column>
-                <el-table-column prop="requestedTime" label="时间"></el-table-column>
-                <el-table-column prop="location" label="地点"></el-table-column>
-                <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
+                <el-table-column prop="teacherName" label="老师" />
+                <el-table-column prop="subject" label="学科" />
+                <el-table-column prop="requestedDate" label="日期" />
+                <el-table-column prop="requestedTime" label="时间" />
+                <el-table-column prop="location" label="地点" />
+                <el-table-column prop="pricePerHour" label="试课价/小时" />
                 <el-table-column label="状态" min-width="120">
-                  <template #default="scope">
-                    <el-tag class="status-tag" type="success">{{ getStatusText(scope.row.status) }}</el-tag>
+                  <template #default="{ row }">
+                    <el-tag class="status-tag" type="success">{{ getStatusText(row.status) }}</el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作">
-                  <template #default="scope">
-                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
+                  <template #default="{ row }">
+                    <el-button type="info" size="small" @click="openDetailDialog(row)">详情</el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
+
             <el-tab-pane label="已完成试课">
               <el-table :data="completedAppointments" style="width: 100%">
-                <el-table-column prop="teacherName" label="老师"></el-table-column>
-                <el-table-column prop="subject" label="学科"></el-table-column>
-                <el-table-column prop="requestedDate" label="日期"></el-table-column>
-                <el-table-column prop="requestedTime" label="时间"></el-table-column>
-                <el-table-column prop="location" label="地点"></el-table-column>
-                <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
+                <el-table-column prop="teacherName" label="老师" />
+                <el-table-column prop="subject" label="学科" />
+                <el-table-column prop="requestedDate" label="日期" />
+                <el-table-column prop="requestedTime" label="时间" />
+                <el-table-column prop="location" label="地点" />
+                <el-table-column prop="pricePerHour" label="试课价/小时" />
                 <el-table-column label="长期进度" min-width="220">
-                  <template #default="scope">
-                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(scope.row)">{{ getLongTermStatusText(scope.row) }}</el-tag>
+                  <template #default="{ row }">
+                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(row)">
+                      {{ getLongTermStatusText(row) }}
+                    </el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作" min-width="360">
-                  <template #default="scope">
-                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
+                  <template #default="{ row }">
+                    <el-button type="info" size="small" @click="openDetailDialog(row)">详情</el-button>
                     <el-button
-                      v-if="scope.row.canEvaluate || scope.row.hasEvaluated"
+                      v-if="row.canEvaluate || row.hasEvaluated"
                       type="warning"
                       size="small"
-                      @click="openEvaluateDialog(scope.row)"
-                      :disabled="scope.row.hasEvaluated"
+                      :disabled="row.hasEvaluated"
+                      @click="openEvaluateDialog(row)"
                     >
-                      {{ scope.row.hasEvaluated ? '已评价' : '评价老师' }}
+                      {{ row.hasEvaluated ? '已评价' : '评价老师' }}
                     </el-button>
                     <el-button
                       type="success"
                       size="small"
-                      @click="confirmLongTerm(scope.row)"
-                      :disabled="!canConfirmLongTerm(scope.row)"
+                      :disabled="!canConfirmLongTerm(row)"
+                      @click="confirmLongTerm(row)"
                     >
-                      {{ scope.row.studentConfirmedLongTerm ? '已确认长期合作' : '确认长期合作' }}
+                      {{ row.studentConfirmedLongTerm ? '已确认长期合作' : '确认长期合作' }}
                     </el-button>
                     <el-button
-                      v-if="canRejectLongTerm(scope.row)"
+                      v-if="canRejectLongTerm(row)"
                       type="danger"
                       size="small"
-                      @click="rejectLongTerm(scope.row)"
+                      @click="rejectLongTerm(row)"
                     >
                       拒绝长期合作
                     </el-button>
@@ -131,53 +155,57 @@
                 </el-table-column>
               </el-table>
             </el-tab-pane>
+
             <el-tab-pane label="长期授课">
               <el-table :data="longTermAppointments" style="width: 100%">
-                <el-table-column prop="teacherName" label="老师"></el-table-column>
-                <el-table-column prop="subject" label="学科"></el-table-column>
-                <el-table-column prop="requestedDate" label="试课日期"></el-table-column>
-                <el-table-column prop="requestedTime" label="试课时间"></el-table-column>
-                <el-table-column prop="location" label="地点"></el-table-column>
+                <el-table-column prop="teacherName" label="老师" />
+                <el-table-column prop="subject" label="学科" />
+                <el-table-column prop="requestedDate" label="试课日期" />
+                <el-table-column prop="requestedTime" label="试课时间" />
+                <el-table-column prop="location" label="地点" />
                 <el-table-column label="合作状态" min-width="220">
-                  <template #default="scope">
-                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(scope.row)">{{ getLongTermStatusText(scope.row) }}</el-tag>
+                  <template #default="{ row }">
+                    <el-tag class="status-tag long-term-status" :type="getLongTermTagType(row)">
+                      {{ getLongTermStatusText(row) }}
+                    </el-tag>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作" min-width="220">
-                  <template #default="scope">
-                    <el-button type="info" size="small" @click="openDetailDialog(scope.row)">详情</el-button>
+                  <template #default="{ row }">
+                    <el-button type="info" size="small" @click="openDetailDialog(row)">详情</el-button>
                     <el-button
-                      v-if="scope.row.status === 'LONG_TERM_CONFIRMED' && !scope.row.studentConfirmedLongTermCompletion"
+                      v-if="row.status === 'LONG_TERM_CONFIRMED' && !row.studentConfirmedLongTermCompletion"
                       type="primary"
                       size="small"
-                      @click="completeLongTermAppointment(scope.row.id)"
+                      @click="completeLongTermAppointment(row.id)"
                     >
                       确认完成长期授课
                     </el-button>
                     <el-button
-                      v-if="scope.row.canEvaluate || scope.row.hasEvaluated"
+                      v-if="row.canEvaluate || row.hasEvaluated"
                       type="warning"
                       size="small"
-                      @click="openEvaluateDialog(scope.row)"
-                      :disabled="scope.row.hasEvaluated"
+                      :disabled="row.hasEvaluated"
+                      @click="openEvaluateDialog(row)"
                     >
-                      {{ scope.row.hasEvaluated ? '已评价' : '评价老师' }}
+                      {{ row.hasEvaluated ? '已评价' : '评价老师' }}
                     </el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </el-tab-pane>
+
             <el-tab-pane label="已拒绝">
               <el-table :data="rejectedAppointments" style="width: 100%">
-                <el-table-column prop="teacherName" label="老师"></el-table-column>
-                <el-table-column prop="subject" label="学科"></el-table-column>
-                <el-table-column prop="requestedDate" label="日期"></el-table-column>
-                <el-table-column prop="requestedTime" label="时间"></el-table-column>
-                <el-table-column prop="location" label="地点"></el-table-column>
-                <el-table-column prop="pricePerHour" label="试课价/小时"></el-table-column>
+                <el-table-column prop="teacherName" label="老师" />
+                <el-table-column prop="subject" label="学科" />
+                <el-table-column prop="requestedDate" label="日期" />
+                <el-table-column prop="requestedTime" label="时间" />
+                <el-table-column prop="location" label="地点" />
+                <el-table-column prop="pricePerHour" label="试课价/小时" />
                 <el-table-column label="状态" min-width="160">
-                  <template #default="scope">
-                    <el-tag class="status-tag" type="danger">{{ getStatusText(scope.row.status) }}</el-tag>
+                  <template #default="{ row }">
+                    <el-tag class="status-tag" type="danger">{{ getStatusText(row.status) }}</el-tag>
                   </template>
                 </el-table-column>
               </el-table>
@@ -224,7 +252,9 @@
               {{ selectedAppointment?.pricePerHour || 0 }}
             </el-descriptions-item>
             <el-descriptions-item label="状态">
-              <el-tag class="status-tag" :type="getStatusType(selectedAppointment?.status)">{{ getStatusText(selectedAppointment?.status) }}</el-tag>
+              <el-tag class="status-tag" :type="getStatusType(selectedAppointment?.status)">
+                {{ getStatusText(selectedAppointment?.status) }}
+              </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="长期合作进度" :span="2">
               {{ getLongTermStatusText(selectedAppointment) }}
@@ -242,22 +272,22 @@
         <el-dialog v-model="evaluateDialogVisible" title="评价老师" width="500px">
           <el-form :model="evaluateForm" label-width="100px">
             <el-form-item label="老师">
-              <el-input :value="selectedAppointment?.teacherName" disabled></el-input>
+              <el-input :value="selectedAppointment?.teacherName" disabled />
             </el-form-item>
             <el-form-item label="学科">
-              <el-input :value="selectedAppointment?.subject" disabled></el-input>
+              <el-input :value="selectedAppointment?.subject" disabled />
             </el-form-item>
             <el-form-item label="教学质量">
-              <el-rate v-model="evaluateForm.teachingQuality" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+              <el-rate v-model="evaluateForm.teachingQuality" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" />
             </el-form-item>
             <el-form-item label="服务态度">
-              <el-rate v-model="evaluateForm.attitude" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+              <el-rate v-model="evaluateForm.attitude" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" />
             </el-form-item>
             <el-form-item label="满意度">
-              <el-rate v-model="evaluateForm.satisfaction" :colors="['#99A9BF', '#F7BA2A', '#FF9900']"></el-rate>
+              <el-rate v-model="evaluateForm.satisfaction" :colors="['#99A9BF', '#F7BA2A', '#FF9900']" />
             </el-form-item>
             <el-form-item label="评价内容">
-              <el-input v-model="evaluateForm.comment" type="textarea" rows="4" placeholder="请输入评价"></el-input>
+              <el-input v-model="evaluateForm.comment" type="textarea" rows="4" placeholder="请输入评价" />
             </el-form-item>
           </el-form>
           <template #footer>
@@ -348,29 +378,31 @@ export default {
       try {
         const response = await appointmentApi.getList();
         const appointments = response || [];
-        for (const app of appointments) {
-          if (app.status === 'COMPLETED' || app.status === 'LONG_TERM_CONFIRMED' || app.status === 'LONG_TERM_COMPLETED') {
+
+        for (const appointment of appointments) {
+          if (['COMPLETED', 'LONG_TERM_CONFIRMED', 'LONG_TERM_COMPLETED'].includes(appointment.status)) {
             try {
-              const checkResult = await evaluationApi.check(app.id);
-              app.hasEvaluated = checkResult.hasEvaluated;
-              app.canEvaluate = checkResult.canEvaluate;
+              const checkResult = await evaluationApi.check(appointment.id);
+              appointment.hasEvaluated = checkResult.hasEvaluated;
+              appointment.canEvaluate = checkResult.canEvaluate;
             } catch {
-              app.hasEvaluated = false;
-              app.canEvaluate = false;
+              appointment.hasEvaluated = false;
+              appointment.canEvaluate = false;
             }
           } else {
-            app.hasEvaluated = false;
-            app.canEvaluate = false;
+            appointment.hasEvaluated = false;
+            appointment.canEvaluate = false;
           }
         }
-        this.pendingAppointments = appointments.filter(app => app.status === 'PENDING');
-        this.acceptedAppointments = appointments.filter(app => app.status === 'ACCEPTED');
-        this.completedAppointments = appointments.filter(app => app.status === 'COMPLETED');
-        this.longTermAppointments = appointments.filter(app => app.status === 'LONG_TERM_CONFIRMED' || app.status === 'LONG_TERM_COMPLETED');
-        this.rejectedAppointments = appointments.filter(app => app.status === 'REJECTED' || app.status === 'LONG_TERM_REJECTED');
+
+        this.pendingAppointments = appointments.filter(item => item.status === 'PENDING');
+        this.acceptedAppointments = appointments.filter(item => item.status === 'ACCEPTED');
+        this.completedAppointments = appointments.filter(item => item.status === 'COMPLETED');
+        this.longTermAppointments = appointments.filter(item => ['LONG_TERM_CONFIRMED', 'LONG_TERM_COMPLETED'].includes(item.status));
+        this.rejectedAppointments = appointments.filter(item => ['REJECTED', 'LONG_TERM_REJECTED'].includes(item.status));
       } catch (error) {
-        console.error('加载试课列表失败:', error);
-        this.$message.error('加载试课列表失败');
+        console.error('加载预约列表失败:', error);
+        this.$message.error('加载预约列表失败');
       }
     },
     async cancelAppointment(id) {
@@ -382,6 +414,35 @@ export default {
         console.error('取消试课失败:', error);
         this.$message.error('取消试课失败');
       }
+    },
+    async acceptAppointment(id) {
+      try {
+        this.assertApiSuccess(await appointmentApi.update(id, { status: 'ACCEPTED' }));
+        this.$message.success('已接受试课申请');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('接受试课失败:', error);
+        this.$message.error('接受试课失败，请稍后重试');
+      }
+    },
+    async rejectAppointment(id) {
+      try {
+        this.assertApiSuccess(await appointmentApi.update(id, { status: 'REJECTED' }));
+        this.$message.success('已拒绝试课申请');
+        this.loadAppointments();
+      } catch (error) {
+        console.error('拒绝试课失败:', error);
+        this.$message.error('拒绝试课失败，请稍后重试');
+      }
+    },
+    canAcceptAppointment(appointment) {
+      return appointment?.status === 'PENDING' && appointment?.initiatorRole === 'TEACHER';
+    },
+    canRejectAppointment(appointment) {
+      return appointment?.status === 'PENDING' && appointment?.initiatorRole === 'TEACHER';
+    },
+    canCancelAppointment(appointment) {
+      return appointment?.status === 'PENDING' && appointment?.initiatorRole === 'STUDENT';
     },
     openDetailDialog(appointment) {
       this.selectedAppointment = appointment;
@@ -426,7 +487,7 @@ export default {
         return '长期授课进行中';
       }
       if (appointment.studentConfirmedLongTerm && appointment.teacherConfirmedLongTerm) {
-        return '双方已确认';
+        return '双方已确认长期合作';
       }
       if (appointment.studentConfirmedLongTerm) {
         return '你已确认，等待老师确认';
@@ -454,31 +515,31 @@ export default {
     async confirmLongTerm(appointment) {
       try {
         const response = this.assertApiSuccess(await appointmentApi.confirmLongTerm(appointment.id));
-        this.$message.success(response.message || '操作成功');
+        this.$message.success('已确认长期合作');
         this.loadAppointments();
       } catch (error) {
         console.error('确认长期合作失败:', error);
-        this.$message.error('确认长期合作失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('确认长期合作失败，请稍后重试');
       }
     },
     async completeLongTermAppointment(id) {
       try {
         const response = this.assertApiSuccess(await appointmentApi.update(id, { status: 'LONG_TERM_COMPLETED' }));
-        this.$message.success(response.message || '操作成功');
+        this.$message.success('已确认完成长期授课');
         this.loadAppointments();
       } catch (error) {
         console.error('完成长期授课失败:', error);
-        this.$message.error('完成长期授课失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('完成长期授课失败，请稍后重试');
       }
     },
     async rejectLongTerm(appointment) {
       try {
         const response = this.assertApiSuccess(await appointmentApi.update(appointment.id, { status: 'LONG_TERM_REJECTED' }));
-        this.$message.success(response.message || '已拒绝长期合作');
+        this.$message.success('已拒绝长期合作');
         this.loadAppointments();
       } catch (error) {
         console.error('拒绝长期合作失败:', error);
-        this.$message.error('拒绝长期合作失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('拒绝长期合作失败，请稍后重试');
       }
     },
     async submitEvaluation() {
@@ -500,11 +561,11 @@ export default {
           this.evaluateDialogVisible = false;
           this.loadAppointments();
         } else {
-          this.$message.error(response.error || '提交评价失败');
+          this.$message.error('提交评价失败');
         }
       } catch (error) {
         console.error('提交评价失败:', error);
-        this.$message.error('提交评价失败: ' + (error.response?.data?.error || error.message));
+        this.$message.error('提交评价失败，请稍后重试');
       }
     },
     getStatusType(status) {
@@ -599,12 +660,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -614,16 +675,17 @@ export default {
   background-color: #304156;
 }
 
-.sidebar-menu .el-menu-item {
-  color: #bfcbd9;
+.sidebar-menu :deep(.el-menu-item) {
+  color: white;
 }
 
-.sidebar-menu .el-menu-item:hover {
+.sidebar-menu :deep(.el-menu-item:hover) {
+  color: white;
   background-color: #263445;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  color: #409EFF;
+.sidebar-menu :deep(.el-menu-item.is-active) {
+  color: #409eff;
   background-color: #263445;
 }
 
@@ -636,7 +698,9 @@ export default {
 
 .appointments-container h2 {
   margin-bottom: 30px;
-  color: #409EFF;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 :deep(.status-tag.el-tag) {

@@ -24,10 +24,14 @@
             <span>预约管理</span>
           </el-menu-item>
           <el-menu-item index="4">
+            <el-icon><Document /></el-icon>
+            <span>求职与需求</span>
+          </el-menu-item>
+          <el-menu-item index="5">
             <el-icon><Comment /></el-icon>
             <span>评价管理</span>
           </el-menu-item>
-          <el-menu-item index="5">
+          <el-menu-item index="6">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -131,7 +135,7 @@
 </template>
 
 <script>
-import { User, DataLine, Calendar, SwitchButton, Comment } from '@element-plus/icons-vue';
+import { User, DataLine, Calendar, SwitchButton, Comment, Document } from '@element-plus/icons-vue';
 import axios from 'axios';
 
 export default {
@@ -141,6 +145,7 @@ export default {
     DataLine,
     Calendar,
     Comment,
+    Document,
     SwitchButton
   },
   data() {
@@ -187,9 +192,12 @@ export default {
           this.$router.push('/admin/appointments');
           break;
         case '4':
-          this.$router.push('/admin/evaluations');
+          this.$router.push('/admin/resources');
           break;
         case '5':
+          this.$router.push('/admin/evaluations');
+          break;
+        case '6':
           this.logout();
           break;
       }

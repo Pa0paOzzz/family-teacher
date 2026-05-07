@@ -7,6 +7,7 @@ import com.familyteacher.backend.entity.Teacher;
 import com.familyteacher.backend.entity.TeacherJobPost;
 import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.repository.AppointmentRequestRepository;
+import com.familyteacher.backend.repository.OrderRepository;
 import com.familyteacher.backend.repository.StudentTutoringRequestRepository;
 import com.familyteacher.backend.repository.TeacherJobPostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,9 +43,15 @@ public class AppointmentService {
     @Autowired
     private StudentTutoringRequestRepository studentTutoringRequestRepository;
 
+    @Autowired
+    private OrderRepository orderRepository;
+
     public AppointmentRequest createAppointmentRequest(AppointmentRequest request) {
         if (request.getAppointmentType() == null || request.getAppointmentType().isBlank()) {
             request.setAppointmentType("TRIAL_INTERVIEW");
+        }
+        if (request.getInitiatorRole() == null || request.getInitiatorRole().isBlank()) {
+            return null;
         }
         if (request.getStudentConfirmedLongTerm() == null) {
             request.setStudentConfirmedLongTerm(false);
@@ -84,7 +91,7 @@ public class AppointmentService {
         }
 
         String normalizedStatus = normalizeStatus(status);
-        if (normalizedStatus == null || !canTransition(appointment.getStatus(), normalizedStatus, isStudent, isTeacher)) {
+        if (normalizedStatus == null || !canTransition(appointment.getStatus(), normalizedStatus, isStudent, isTeacher, appointment.getInitiatorRole())) {
             return null;
         }
         if ("LONG_TERM_REJECTED".equals(normalizedStatus)) {
@@ -122,6 +129,43 @@ public class AppointmentService {
 
     public AppointmentRequest getAppointmentById(Long id) {
         return appointmentRequestRepository.findById(id).orElse(null);
+    }
+
+    @Transactional
+    public boolean cancelPendingAppointment(Long id, User user) {
+        AppointmentRequest appointment = appointmentRequestRepository.findById(id).orElse(null);
+        if (appointment == null || user == null) {
+            return false;
+        }
+        if (!"PENDING".equals(appointment.getStatus())
+                || appointment.getStudent() == null
+                || appointment.getTeacher() == null
+                || appointment.getStudent().getUser() == null
+                || appointment.getTeacher().getUser() == null) {
+            return false;
+        }
+
+        Long userId = user.getId();
+        boolean isStudent = Objects.equals(appointment.getStudent().getUser().getId(), userId);
+        boolean isTeacher = Objects.equals(appointment.getTeacher().getUser().getId(), userId);
+        if (!isStudent && !isTeacher) {
+            return false;
+        }
+
+        String initiatorRole = appointment.getInitiatorRole();
+        if ("STUDENT".equalsIgnoreCase(initiatorRole) && !isStudent) {
+            return false;
+        }
+        if ("TEACHER".equalsIgnoreCase(initiatorRole) && !isTeacher) {
+            return false;
+        }
+        if (!StringUtils.hasText(initiatorRole)) {
+            return false;
+        }
+
+        orderRepository.findByAppointment(appointment).ifPresent(orderRepository::delete);
+        appointmentRequestRepository.delete(appointment);
+        return true;
     }
 
     public AppointmentRequest adminUpdateAppointment(Long id, String status, String notes) {
@@ -275,6 +319,10 @@ public class AppointmentService {
     }
 
     private boolean canTransition(String currentStatus, String targetStatus, boolean isStudent, boolean isTeacher) {
+        return canTransition(currentStatus, targetStatus, isStudent, isTeacher, null);
+    }
+
+    private boolean canTransition(String currentStatus, String targetStatus, boolean isStudent, boolean isTeacher, String initiatorRole) {
         String normalizedCurrent = normalizeStatus(currentStatus);
         if (normalizedCurrent == null || targetStatus == null || !VALID_STATUSES.contains(targetStatus)) {
             return false;
@@ -283,7 +331,7 @@ public class AppointmentService {
             return true;
         }
         return switch (normalizedCurrent) {
-            case "PENDING" -> isTeacher && Set.of("ACCEPTED", "REJECTED").contains(targetStatus);
+            case "PENDING" -> canPendingTransition(targetStatus, isStudent, isTeacher, initiatorRole);
             case "ACCEPTED" -> isTeacher && "COMPLETED".equals(targetStatus);
             case "COMPLETED" -> (isStudent || isTeacher) && "LONG_TERM_REJECTED".equals(targetStatus);
             case "LONG_TERM_CONFIRMED" -> (isStudent || isTeacher) && "LONG_TERM_COMPLETED".equals(targetStatus);
@@ -314,6 +362,20 @@ public class AppointmentService {
         }
         String normalizedStatus = status.trim().toUpperCase();
         return VALID_STATUSES.contains(normalizedStatus) ? normalizedStatus : null;
+    }
+
+    private boolean canPendingTransition(String targetStatus, boolean isStudent, boolean isTeacher, String initiatorRole) {
+        if (!StringUtils.hasText(initiatorRole)) {
+            return false;
+        }
+        String normalizedInitiator = initiatorRole.trim().toUpperCase();
+        if ("STUDENT".equals(normalizedInitiator)) {
+            return isTeacher && Set.of("ACCEPTED", "REJECTED").contains(targetStatus);
+        }
+        if ("TEACHER".equals(normalizedInitiator)) {
+            return isStudent && Set.of("ACCEPTED", "REJECTED").contains(targetStatus);
+        }
+        return false;
     }
 
     private int closeMatchedTeacherPosts(Teacher teacher, String subject) {

@@ -46,31 +46,25 @@
           <h2>{{ editingId ? '编辑求职信息' : '发布求职信息' }}</h2>
           <el-form :model="jobPostForm" :rules="rules" ref="jobPostFormRef" label-width="100px">
             <el-form-item label="标题" prop="title">
-              <el-input v-model="jobPostForm.title" placeholder="请输入求职标题"></el-input>
+              <el-input v-model="jobPostForm.title" placeholder="请输入求职标题" />
             </el-form-item>
             <el-form-item label="描述" prop="description">
-              <el-input v-model="jobPostForm.description" type="textarea" rows="4" placeholder="请详细描述求职信息"></el-input>
+              <el-input v-model="jobPostForm.description" type="textarea" rows="4" placeholder="请详细描述求职信息" />
             </el-form-item>
             <el-form-item label="学科" prop="subject">
               <el-select v-model="jobPostForm.subject" placeholder="请选择学科" style="width: 100%">
-                <el-option label="语文" value="语文"></el-option>
-                <el-option label="数学" value="数学"></el-option>
-                <el-option label="英语" value="英语"></el-option>
-                <el-option label="政治" value="政治"></el-option>
-                <el-option label="历史" value="历史"></el-option>
-                <el-option label="地理" value="地理"></el-option>
-                <el-option label="化学" value="化学"></el-option>
-                <el-option label="生物" value="生物"></el-option>
-                <el-option label="物理" value="物理"></el-option>
-                <el-option label="信息技术" value="信息技术"></el-option>
-                <el-option label="美术" value="美术"></el-option>
-                <el-option label="音乐" value="音乐"></el-option>
+                <el-option
+                  v-for="subject in subjectOptions"
+                  :key="subject"
+                  :label="subject"
+                  :value="subject"
+                />
               </el-select>
             </el-form-item>
             <el-form-item label="价格/小时" prop="pricePerHour">
-              <el-input v-model.number="jobPostForm.pricePerHour" type="number" placeholder="请输入每小时价格"></el-input>
+              <el-input-number v-model="jobPostForm.pricePerHour" :min="0" :precision="0" style="width: 100%" />
             </el-form-item>
-            <el-form-item label="地点" prop="locationDistrict">
+            <el-form-item label="地区" prop="locationDistrict">
               <LocationSelector
                 :province="jobPostForm.locationProvince"
                 :city="jobPostForm.locationCity"
@@ -78,11 +72,19 @@
                 @update="updateLocation"
               />
             </el-form-item>
-            <el-form-item v-if="jobPostForm.locationFormatted" label="已选地点">
-              <el-input :model-value="jobPostForm.locationFormatted" disabled></el-input>
+            <el-form-item v-if="jobPostForm.locationFormatted" label="已选地区">
+              <el-input :model-value="jobPostForm.locationFormatted" disabled />
             </el-form-item>
-            <el-form-item label="可用时间" prop="availability">
-              <el-input v-model="jobPostForm.availability" placeholder="请输入可用时间"></el-input>
+            <el-form-item label="可用时间" prop="availabilityRange">
+              <el-date-picker
+                v-model="jobPostForm.availabilityRange"
+                type="datetimerange"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                :value-format="datetimeValueFormat"
+                :format="datetimeDisplayFormat"
+                style="width: 100%"
+              />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="submitJobPost">{{ editingId ? '更新' : '发布求职' }}</el-button>
@@ -92,26 +94,27 @@
 
           <h3>我的求职列表</h3>
           <el-table :data="jobPostList" style="width: 100%">
-            <el-table-column prop="title" label="标题" width="200"></el-table-column>
-            <el-table-column prop="subject" label="学科"></el-table-column>
-            <el-table-column prop="pricePerHour" label="价格/小时"></el-table-column>
-            <el-table-column label="地点">
-              <template #default="scope">
-                {{ getLocationText(scope.row) }}
+            <el-table-column prop="title" label="标题" width="200" />
+            <el-table-column prop="subject" label="学科" />
+            <el-table-column prop="pricePerHour" label="价格/小时" />
+            <el-table-column label="地区">
+              <template #default="{ row }">
+                {{ getLocationText(row) }}
               </template>
             </el-table-column>
-            <el-table-column prop="createdAt" label="发布时间"></el-table-column>
+            <el-table-column prop="availability" label="可用时间" min-width="200" />
+            <el-table-column prop="createdAt" label="发布时间" />
             <el-table-column prop="active" label="状态">
-              <template #default="scope">
-                <el-tag :type="scope.row.active ? 'success' : 'danger'">
-                  {{ scope.row.active ? '活跃' : '已关闭' }}
+              <template #default="{ row }">
+                <el-tag :type="row.active ? 'success' : 'danger'">
+                  {{ row.active ? '活跃' : '已关闭' }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="操作">
-              <template #default="scope">
-                <el-button type="primary" size="small" @click="editJobPost(scope.row)">编辑</el-button>
-                <el-button type="danger" size="small" @click="closeJobPost(scope.row.id)" :disabled="!scope.row.active">关闭</el-button>
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="editJobPost(row)">编辑</el-button>
+                <el-button type="danger" size="small" @click="closeJobPost(row.id)" :disabled="!row.active">关闭</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -125,6 +128,13 @@
 import { jobPostApi } from '../../api/api';
 import LocationSelector from '../../components/LocationSelector.vue';
 import { buildLocationPayload, getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import {
+  DATETIME_DISPLAY_FORMAT,
+  DATETIME_VALUE_FORMAT,
+  SUBJECT_OPTIONS,
+  formatDateRangeText,
+  parseDateRangeText
+} from '../../utils/formOptions';
 import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
 
 function createEmptyJobPostForm() {
@@ -132,13 +142,14 @@ function createEmptyJobPostForm() {
     title: '',
     description: '',
     subject: '',
-    pricePerHour: '',
+    pricePerHour: 0,
     location: '',
     locationProvince: '',
     locationCity: '',
     locationDistrict: '',
     locationFormatted: '',
-    availability: ''
+    availability: '',
+    availabilityRange: []
   };
 }
 
@@ -158,36 +169,27 @@ export default {
     return {
       activeIndex: '3',
       jobPostForm: createEmptyJobPostForm(),
+      subjectOptions: SUBJECT_OPTIONS,
+      datetimeValueFormat: DATETIME_VALUE_FORMAT,
+      datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
       rules: {
-        title: [
-          { required: true, message: '请输入求职标题', trigger: 'blur' }
-        ],
-        description: [
-          { required: true, message: '请详细描述求职信息', trigger: 'blur' }
-        ],
-        subject: [
-          { required: true, message: '请输入擅长学科', trigger: 'blur' }
-        ],
-        pricePerHour: [
-          { required: true, message: '请输入每小时价格', trigger: 'blur' }
-        ],
-        locationDistrict: [
-          { required: true, message: '请选择区', trigger: 'change' }
-        ],
-        availability: [
-          { required: true, message: '请输入可用时间', trigger: 'blur' }
-        ]
+        title: [{ required: true, message: '请输入求职标题', trigger: 'blur' }],
+        description: [{ required: true, message: '请详细描述求职信息', trigger: 'blur' }],
+        subject: [{ required: true, message: '请选择学科', trigger: 'change' }],
+        pricePerHour: [{ required: true, message: '请输入每小时价格', trigger: 'change' }],
+        locationDistrict: [{ required: true, message: '请选择区县', trigger: 'change' }],
+        availabilityRange: [{ required: true, message: '请选择可用时间', trigger: 'change' }]
       },
       jobPostList: [],
       editingId: null
-    }
+    };
   },
   mounted() {
     this.getJobPostList();
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/teacher/home');
           break;
@@ -233,39 +235,39 @@ export default {
       }
     },
     async submitJobPost() {
-      this.$refs.jobPostFormRef.validate(async (valid) => {
-        if (valid) {
-          try {
-            const payload = {
-              title: this.jobPostForm.title,
-              description: this.jobPostForm.description,
-              subject: this.jobPostForm.subject,
-              pricePerHour: this.jobPostForm.pricePerHour,
-              availability: this.jobPostForm.availability,
-              ...buildLocationPayload('location', this.jobPostForm)
-            };
+      this.$refs.jobPostFormRef.validate(async valid => {
+        if (!valid) {
+          return;
+        }
 
-            if (this.editingId) {
-              await jobPostApi.update({
-                id: this.editingId,
-                ...payload
-              });
-              this.$message.success('更新成功');
-              this.editingId = null;
-            } else {
-              await jobPostApi.create(payload);
-              this.$message.success('发布成功');
-            }
-            this.jobPostForm = createEmptyJobPostForm();
-            this.$refs.jobPostFormRef.resetFields();
-            this.getJobPostList();
-          } catch (error) {
-            console.error('发布求职失败:', error);
-            this.$message.error('操作失败: ' + (error.response?.data?.error || error.message));
+        try {
+          const payload = {
+            title: this.jobPostForm.title,
+            description: this.jobPostForm.description,
+            subject: this.jobPostForm.subject,
+            pricePerHour: this.jobPostForm.pricePerHour,
+            availability: formatDateRangeText(this.jobPostForm.availabilityRange),
+            ...buildLocationPayload('location', this.jobPostForm)
+          };
+
+          if (this.editingId) {
+            await jobPostApi.update({
+              id: this.editingId,
+              ...payload
+            });
+            this.$message.success('更新成功');
+            this.editingId = null;
+          } else {
+            await jobPostApi.create(payload);
+            this.$message.success('发布成功');
           }
-        } else {
-          console.log('求职表单验证失败');
-          return false;
+
+          this.jobPostForm = createEmptyJobPostForm();
+          this.$refs.jobPostFormRef.resetFields();
+          this.getJobPostList();
+        } catch (error) {
+          console.error('提交求职失败:', error);
+          this.$message.error('操作失败: ' + (error.response?.data?.error || error.message));
         }
       });
     },
@@ -276,8 +278,9 @@ export default {
         title: jobPost.title,
         description: jobPost.description,
         subject: jobPost.subject,
-        pricePerHour: jobPost.pricePerHour,
-        availability: jobPost.availability,
+        pricePerHour: jobPost.pricePerHour || 0,
+        availability: jobPost.availability || '',
+        availabilityRange: parseDateRangeText(jobPost.availability),
         ...normalizeLocationFields('location', jobPost)
       };
     },
@@ -303,7 +306,7 @@ export default {
       this.$router.push('/login');
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -381,18 +384,6 @@ export default {
 
 .el-form-item {
   margin-bottom: 20px;
-}
-
-.el-form-item__content {
-  flex: 1;
-}
-
-.el-input {
-  width: 100%;
-}
-
-.el-table {
-  width: 100% !important;
 }
 
 .job-post-container h2 {

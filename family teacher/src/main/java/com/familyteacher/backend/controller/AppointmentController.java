@@ -77,6 +77,7 @@ public class AppointmentController {
 
             appointment.setStudent(student);
             appointment.setTeacher(teacher);
+            appointment.setInitiatorRole("STUDENT");
         } else if ("TEACHER".equals(user.getRole())) {
             Teacher teacher = teacherService.findByUser(user).orElse(null);
             if (teacher == null) {
@@ -101,6 +102,7 @@ public class AppointmentController {
 
             appointment.setStudent(student);
             appointment.setTeacher(teacher);
+            appointment.setInitiatorRole("TEACHER");
         } else {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "无权操作");
@@ -160,6 +162,12 @@ public class AppointmentController {
         appointment.setTeacherConfirmedLongTerm(false);
 
         AppointmentRequest savedAppointment = appointmentService.createAppointmentRequest(appointment);
+        if (savedAppointment == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "创建预约失败");
+            return error;
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -209,6 +217,7 @@ public class AppointmentController {
             item.put("requestedTime", appointment.getRequestedTime());
             item.put("location", appointment.getLocation());
             item.put("pricePerHour", appointment.getPricePerHour());
+            item.put("initiatorRole", appointment.getInitiatorRole());
             item.put("status", appointment.getStatus());
             item.put("appointmentType", appointment.getAppointmentType());
             item.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
@@ -302,6 +311,7 @@ public class AppointmentController {
         result.put("requestedTime", appointment.getRequestedTime());
         result.put("location", appointment.getLocation());
         result.put("pricePerHour", appointment.getPricePerHour());
+        result.put("initiatorRole", appointment.getInitiatorRole());
         result.put("status", appointment.getStatus());
         result.put("appointmentType", appointment.getAppointmentType());
         result.put("studentConfirmedLongTerm", appointment.getStudentConfirmedLongTerm());
@@ -471,22 +481,16 @@ public class AppointmentController {
             error.put("error", "预约记录不存在");
             return error;
         }
-        
-        if ("STUDENT".equals(user.getRole())) {
-            if (!appointment.getStudent().getUser().getId().equals(user.getId())) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "无权操作该预约");
-                return error;
-            }
-        } else {
+        if (!appointmentService.cancelPendingAppointment(id, user)) {
             Map<String, Object> error = new HashMap<>();
-            error.put("error", "无权操作该预约");
+            error.put("success", false);
+            error.put("error", "当前状态不能取消预约");
             return error;
         }
         
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Appointment deleted successfully");
+        response.put("message", "预约已取消");
         return response;
     }
     

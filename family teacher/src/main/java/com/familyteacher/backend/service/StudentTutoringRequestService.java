@@ -133,6 +133,49 @@ public class StudentTutoringRequestService {
         return response;
     }
 
+    @Transactional
+    public Map<String, Object> setTutoringRequestActive(Long id, boolean active) {
+        StudentTutoringRequest request = studentTutoringRequestRepository.findById(id).orElse(null);
+        Map<String, Object> response = new HashMap<>();
+        if (request == null) {
+            response.put("success", false);
+            response.put("error", "Tutoring request not found");
+            return response;
+        }
+
+        request.setActive(active);
+        studentTutoringRequestRepository.save(request);
+
+        response.put("success", true);
+        response.put("message", active ? "Tutoring request activated successfully" : "Tutoring request deactivated successfully");
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> adminUpdateTutoringRequest(Long id, Map<String, Object> requestData) {
+        Map<String, Object> response = updateTutoringRequestFromData(id, requestData);
+        if (!response.containsKey("success")) {
+            response.put("success", false);
+        }
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> adminDeleteTutoringRequest(Long id) {
+        StudentTutoringRequest request = studentTutoringRequestRepository.findById(id).orElse(null);
+        Map<String, Object> response = new HashMap<>();
+        if (request == null) {
+            response.put("success", false);
+            response.put("error", "Tutoring request not found");
+            return response;
+        }
+
+        studentTutoringRequestRepository.delete(request);
+        response.put("success", true);
+        response.put("message", "Tutoring request deleted successfully");
+        return response;
+    }
+
     private void applyLocation(StudentTutoringRequest tutoringRequest, Map<String, Object> requestData) {
         if (!hasLocationPayload(requestData)) {
             return;

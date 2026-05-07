@@ -26,6 +26,7 @@ public class AppointmentRequest {
     private String location;
     private Double pricePerHour;
     private Integer durationHours;
+    private String initiatorRole; // STUDENT, TEACHER
     private String status; // PENDING, ACCEPTED, REJECTED, COMPLETED, LONG_TERM_CONFIRMED, LONG_TERM_REJECTED, LONG_TERM_COMPLETED
     private String appointmentType; // TRIAL_INTERVIEW
     private Boolean studentConfirmedLongTerm;

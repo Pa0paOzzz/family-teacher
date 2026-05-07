@@ -6,11 +6,7 @@
           <h2>家教平台</h2>
           <p>教师端</p>
         </div>
-        <el-menu
-          :default-active="activeIndex"
-          class="sidebar-menu"
-          @select="handleMenuSelect"
-        >
+        <el-menu :default-active="activeIndex" class="sidebar-menu" @select="handleMenuSelect">
           <el-menu-item index="1">
             <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
@@ -41,11 +37,12 @@
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-main>
         <div class="favorites-container">
           <h2>我的收藏</h2>
           <el-row :gutter="20">
-            <el-col :span="8" v-for="favorite in favoriteList" :key="favorite.id">
+            <el-col v-for="favorite in favoriteList" :key="favorite.id" :span="8">
               <el-card class="favorite-card" shadow="hover">
                 <template #header>
                   <div class="card-header">
@@ -53,6 +50,7 @@
                     <el-tag type="success">{{ favorite.resource?.subject || '未知学科' }}</el-tag>
                   </div>
                 </template>
+
                 <div class="card-content">
                   <p class="description">{{ favorite.resource?.description || '暂无描述' }}</p>
                   <div class="info-row">
@@ -65,7 +63,7 @@
                   </div>
                   <div class="info-row">
                     <el-icon><Location /></el-icon>
-                    <span>{{ getLocationText(favorite.resource) || '未知地点' }}</span>
+                    <span>{{ getLocationText(favorite.resource) || '未知地区' }}</span>
                   </div>
                   <div class="info-row">
                     <el-icon><Clock /></el-icon>
@@ -73,7 +71,7 @@
                   </div>
                   <div class="price-row">
                     <span class="price">¥{{ favorite.resource?.budgetPerHour || 0 }}/小时</span>
-                    <div>
+                    <div class="action-buttons">
                       <el-button type="primary" size="small" @click="openContactDialog(favorite)">联系学生</el-button>
                       <el-button type="danger" size="small" @click="removeFavorite(favorite)">取消收藏</el-button>
                     </div>
@@ -82,22 +80,23 @@
               </el-card>
             </el-col>
           </el-row>
-          <el-empty v-if="favoriteList.length === 0" description="暂无收藏"></el-empty>
+
+          <el-empty v-if="favoriteList.length === 0" description="暂无收藏" />
         </div>
 
         <el-dialog v-model="contactDialogVisible" title="联系学生" width="500px">
           <el-form :model="contactForm" label-width="100px">
             <el-form-item label="学生姓名">
-              <el-input :value="selectedFavorite?.resource?.student?.name" disabled></el-input>
+              <el-input :value="selectedFavorite?.resource?.student?.name" disabled />
             </el-form-item>
             <el-form-item label="学科">
-              <el-input :value="selectedFavorite?.resource?.subject" disabled></el-input>
+              <el-input :value="selectedFavorite?.resource?.subject" disabled />
             </el-form-item>
             <el-form-item label="联系方式">
-              <el-input v-model="contactForm.contact" placeholder="请输入您的联系方式"></el-input>
+              <el-input v-model="contactForm.contact" placeholder="请输入您的联系方式" />
             </el-form-item>
             <el-form-item label="留言">
-              <el-input v-model="contactForm.message" type="textarea" rows="3" placeholder="请输入留言内容"></el-input>
+              <el-input v-model="contactForm.message" type="textarea" rows="3" placeholder="请输入留言内容" />
             </el-form-item>
           </el-form>
           <template #footer>
@@ -139,14 +138,14 @@ export default {
         contact: '',
         message: ''
       }
-    }
+    };
   },
   mounted() {
     this.loadFavorites();
   },
   methods: {
     handleMenuSelect(index) {
-      switch(index) {
+      switch (index) {
         case '1':
           this.$router.push('/teacher/home');
           break;
@@ -218,7 +217,7 @@ export default {
       this.$router.push('/login');
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -253,12 +252,12 @@ export default {
 
 .logo h2 {
   margin: 0;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 
 .logo p {
-  margin: 5px 0 0 0;
+  margin: 5px 0 0;
   color: #bfcbd9;
   font-size: 12px;
 }
@@ -278,7 +277,7 @@ export default {
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  color: #409EFF;
+  color: #409eff;
   background-color: #263445;
 }
 
@@ -305,7 +304,7 @@ export default {
 
 .favorite-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
 }
 
 .card-header {
@@ -324,7 +323,7 @@ export default {
   font-size: 14px;
 }
 
-.card-content .description {
+.description {
   color: #606266;
   line-height: 1.6;
   margin-bottom: 15px;
@@ -351,11 +350,19 @@ export default {
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #ebeef5;
+  gap: 12px;
 }
 
-.price-row .price {
+.price {
   font-size: 20px;
   font-weight: bold;
-  color: #409EFF;
+  color: #f56c6c;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 </style>
