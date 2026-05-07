@@ -31,9 +31,31 @@ public class UserService {
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public User register(User user) {
+    public Map<String, Object> register(User user) {
+        Map<String, Object> response = new HashMap<>();
+        
+        // 检查用户名是否已存在
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            response.put("success", false);
+            response.put("error", "用户名已存在");
+            return response;
+        }
+        
+        // 检查邮箱是否已存在
+        if (StringUtils.hasText(user.getEmail()) && userRepository.findByEmail(user.getEmail()).isPresent()) {
+            response.put("success", false);
+            response.put("error", "邮箱已被注册");
+            return response;
+        }
+        
+        // 加密密码并保存用户
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        
+        response.put("success", true);
+        response.put("message", "注册成功");
+        response.put("user", savedUser);
+        return response;
     }
 
     public Optional<User> findByUsername(String username) {
@@ -136,6 +158,7 @@ public class UserService {
         response.put("grade", student.getGrade());
         response.put("major", student.getMajor());
         putAddressFields(response, student);
+        addEditableFields(response);
 
         return response;
     }
@@ -164,6 +187,7 @@ public class UserService {
         response.put("rating", teacher.getRating());
         response.put("reviewCount", teacher.getReviewCount());
         putAddressFields(response, teacher);
+        addEditableFields(response);
 
         return response;
     }
@@ -173,11 +197,20 @@ public class UserService {
         if (profileData.containsKey("name")) {
             user.setName((String) profileData.get("name"));
         }
-        if (profileData.containsKey("email")) {
-            user.setEmail((String) profileData.get("email"));
-        }
         if (profileData.containsKey("phone")) {
             user.setPhone((String) profileData.get("phone"));
+        }
+        if (profileData.containsKey("email")) {
+            String newEmail = (String) profileData.get("email");
+            if (StringUtils.hasText(newEmail) && !newEmail.equals(user.getEmail())) {
+                if (userRepository.findByEmail(newEmail).isPresent()) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("success", false);
+                    error.put("error", "邮箱已被注册");
+                    return error;
+                }
+                user.setEmail(newEmail);
+            }
         }
         updateUser(user);
 
@@ -214,11 +247,20 @@ public class UserService {
         if (profileData.containsKey("name")) {
             user.setName((String) profileData.get("name"));
         }
-        if (profileData.containsKey("email")) {
-            user.setEmail((String) profileData.get("email"));
-        }
         if (profileData.containsKey("phone")) {
             user.setPhone((String) profileData.get("phone"));
+        }
+        if (profileData.containsKey("email")) {
+            String newEmail = (String) profileData.get("email");
+            if (StringUtils.hasText(newEmail) && !newEmail.equals(user.getEmail())) {
+                if (userRepository.findByEmail(newEmail).isPresent()) {
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("success", false);
+                    error.put("error", "邮箱已被注册");
+                    return error;
+                }
+                user.setEmail(newEmail);
+            }
         }
         updateUser(user);
 
@@ -324,5 +366,163 @@ public class UserService {
     private String getString(Map<String, Object> data, String key) {
         Object value = data.get(key);
         return value == null ? null : String.valueOf(value);
+    }
+
+    private void addEditableFields(Map<String, Object> response) {
+        Map<String, Boolean> editableFields = new HashMap<>();
+        editableFields.put("name", true);
+        editableFields.put("email", true);
+        editableFields.put("phone", true);
+        editableFields.put("school", true);
+        editableFields.put("grade", true);
+        editableFields.put("major", true);
+        editableFields.put("address", true);
+        editableFields.put("addressProvince", true);
+        editableFields.put("addressCity", true);
+        editableFields.put("addressDistrict", true);
+        editableFields.put("addressFormatted", true);
+        editableFields.put("education", true);
+        editableFields.put("teachingExperience", true);
+        editableFields.put("subject", true);
+        editableFields.put("bio", true);
+        editableFields.put("pricePerHour", true);
+
+        editableFields.put("username", false);
+
+        response.put("editableFields", editableFields);
+    }
+
+    @Transactional
+    public Map<String, Object> adminUpdateStudentProfile(Long studentId, Map<String, Object> profileData) {
+        Optional<Student> studentOptional = studentService.findById(studentId);
+        if (studentOptional.isEmpty()) {
+            return errorMap("Student not found");
+        }
+
+        Student student = studentOptional.get();
+        User user = student.getUser();
+
+        if (profileData.containsKey("username")) {
+            String newUsername = getString(profileData, "username");
+            if (StringUtils.hasText(newUsername) && !newUsername.equals(user.getUsername())) {
+                if (userRepository.findByUsername(newUsername).isPresent()) {
+                    return errorMap("Username already exists");
+                }
+                user.setUsername(newUsername);
+            }
+        }
+
+        if (profileData.containsKey("email")) {
+            String newEmail = getString(profileData, "email");
+            if (StringUtils.hasText(newEmail) && !newEmail.equals(user.getEmail())) {
+                if (userRepository.findByEmail(newEmail).isPresent()) {
+                    return errorMap("Email already exists");
+                }
+                user.setEmail(newEmail);
+            }
+        }
+
+        if (profileData.containsKey("name")) {
+            user.setName(getString(profileData, "name"));
+        }
+        if (profileData.containsKey("phone")) {
+            user.setPhone(getString(profileData, "phone"));
+        }
+        userRepository.save(user);
+
+        if (profileData.containsKey("school")) {
+            student.setSchool(getString(profileData, "school"));
+        }
+        if (profileData.containsKey("grade")) {
+            student.setGrade(getString(profileData, "grade"));
+        }
+        if (profileData.containsKey("major")) {
+            student.setMajor(getString(profileData, "major"));
+        }
+        applyStudentAddress(student, profileData);
+        studentService.updateStudent(student);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Student profile updated successfully");
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> adminUpdateTeacherProfile(Long teacherId, Map<String, Object> profileData) {
+        Optional<Teacher> teacherOptional = teacherService.findById(teacherId);
+        if (teacherOptional.isEmpty()) {
+            return errorMap("Teacher not found");
+        }
+
+        Teacher teacher = teacherOptional.get();
+        User user = teacher.getUser();
+
+        if (profileData.containsKey("username")) {
+            String newUsername = getString(profileData, "username");
+            if (StringUtils.hasText(newUsername) && !newUsername.equals(user.getUsername())) {
+                if (userRepository.findByUsername(newUsername).isPresent()) {
+                    return errorMap("Username already exists");
+                }
+                user.setUsername(newUsername);
+            }
+        }
+
+        if (profileData.containsKey("email")) {
+            String newEmail = getString(profileData, "email");
+            if (StringUtils.hasText(newEmail) && !newEmail.equals(user.getEmail())) {
+                if (userRepository.findByEmail(newEmail).isPresent()) {
+                    return errorMap("Email already exists");
+                }
+                user.setEmail(newEmail);
+            }
+        }
+
+        if (profileData.containsKey("name")) {
+            user.setName(getString(profileData, "name"));
+        }
+        if (profileData.containsKey("phone")) {
+            user.setPhone(getString(profileData, "phone"));
+        }
+        userRepository.save(user);
+
+        if (profileData.containsKey("school")) {
+            teacher.setSchool(getString(profileData, "school"));
+        }
+        if (profileData.containsKey("major")) {
+            teacher.setMajor(getString(profileData, "major"));
+        }
+        if (profileData.containsKey("education")) {
+            teacher.setEducation(getString(profileData, "education"));
+        }
+        if (profileData.containsKey("teachingExperience")) {
+            teacher.setTeachingExperience(getString(profileData, "teachingExperience"));
+        }
+        if (profileData.containsKey("subject")) {
+            teacher.setSubject(getString(profileData, "subject"));
+        }
+        if (profileData.containsKey("bio")) {
+            teacher.setBio(getString(profileData, "bio"));
+        }
+        if (profileData.containsKey("pricePerHour")) {
+            Object priceObj = profileData.get("pricePerHour");
+            if (priceObj instanceof Number) {
+                teacher.setPricePerHour(((Number) priceObj).doubleValue());
+            }
+        }
+        applyTeacherAddress(teacher, profileData);
+        teacherService.updateTeacher(teacher);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Teacher profile updated successfully");
+        return response;
+    }
+
+    private Map<String, Object> errorMap(String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", message);
+        return response;
     }
 }

@@ -12,11 +12,13 @@ import com.familyteacher.backend.repository.StudentRepository;
 import com.familyteacher.backend.repository.AppointmentRequestRepository;
 import com.familyteacher.backend.repository.OrderRepository;
 import com.familyteacher.backend.repository.EvaluationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.familyteacher.backend.service.StudentService;
+import com.familyteacher.backend.service.TeacherService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,15 @@ public class AdminService {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private StudentService studentService;
+
+    @Autowired
+    private TeacherService teacherService;
 
     // 获取所有用户
     public List<Map<String, Object>> getAllUsers() {
@@ -475,5 +486,15 @@ public class AdminService {
 
     private String defaultText(String value) {
         return value == null || value.isBlank() ? "未填写" : value;
+    }
+
+    @Transactional
+    public Map<String, Object> updateStudentInfo(Long studentId, Map<String, Object> profileData) {
+        return userService.adminUpdateStudentProfile(studentId, profileData);
+    }
+
+    @Transactional
+    public Map<String, Object> updateTeacherInfo(Long teacherId, Map<String, Object> profileData) {
+        return userService.adminUpdateTeacherProfile(teacherId, profileData);
     }
 }

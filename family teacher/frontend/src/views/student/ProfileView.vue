@@ -44,7 +44,22 @@
       <el-main>
         <div class="profile-container">
           <h2>个人资料</h2>
-          <el-form :model="studentForm" :rules="rules" ref="studentFormRef" label-width="100px">
+          <div v-if="!isEditing" class="profile-display">
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="用户名">{{ studentForm.username }}</el-descriptions-item>
+              <el-descriptions-item label="姓名">{{ studentForm.name }}</el-descriptions-item>
+              <el-descriptions-item label="邮箱">{{ studentForm.email }}</el-descriptions-item>
+              <el-descriptions-item label="手机号">{{ studentForm.phone }}</el-descriptions-item>
+              <el-descriptions-item label="学校">{{ studentForm.school }}</el-descriptions-item>
+              <el-descriptions-item label="年级">{{ studentForm.grade }}</el-descriptions-item>
+              <el-descriptions-item label="专业">{{ studentForm.major }}</el-descriptions-item>
+              <el-descriptions-item label="地址">{{ studentForm.addressFormatted || studentForm.address }}</el-descriptions-item>
+            </el-descriptions>
+            <div class="button-group">
+              <el-button type="primary" @click="startEditing">修改个人信息</el-button>
+            </div>
+          </div>
+          <el-form v-else :model="studentForm" :rules="rules" ref="studentFormRef" label-width="100px">
             <el-form-item label="用户名">
               <el-input v-model="studentForm.username" disabled></el-input>
             </el-form-item>
@@ -79,6 +94,7 @@
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveProfile">保存修改</el-button>
+              <el-button @click="cancelEdit">取消</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -125,6 +141,8 @@ export default {
   data() {
     return {
       activeIndex: '2',
+      isEditing: false,
+      originalForm: null,
       studentForm: createEmptyStudentForm(),
       rules: {
         name: [
@@ -190,6 +208,18 @@ export default {
         addressFormatted: location.formatted
       });
     },
+    startEditing() {
+      // 保存原始数据用于取消时恢复
+      this.originalForm = { ...this.studentForm };
+      this.isEditing = true;
+    },
+    cancelEdit() {
+      // 恢复原始数据
+      if (this.originalForm) {
+        this.studentForm = { ...this.originalForm };
+      }
+      this.isEditing = false;
+    },
     async loadProfile() {
       try {
         const response = await userApi.getStudentProfile();
@@ -214,7 +244,6 @@ export default {
         if (valid) {
           try {
             await userApi.updateStudentProfile({
-              username: this.studentForm.username,
               name: this.studentForm.name,
               email: this.studentForm.email,
               phone: this.studentForm.phone,
@@ -224,7 +253,9 @@ export default {
               ...buildLocationPayload('address', this.studentForm)
             });
             this.$message.success('保存成功');
-            this.$router.push('/student/home');
+            this.isEditing = false;
+            // 重新加载最新数据
+            await this.loadProfile();
           } catch (error) {
             console.error('保存个人资料失败:', error);
             this.$message.error('保存失败: ' + (error.response?.data?.error || error.message));
@@ -310,5 +341,15 @@ export default {
   background-color: white;
   border-radius: 8px;
   min-height: calc(100vh - 40px);
+}
+
+.profile-display {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.button-group {
+  margin-top: 20px;
+  text-align: center;
 }
 </style>

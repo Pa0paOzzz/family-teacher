@@ -57,13 +57,23 @@ public class AdminController {
     public List<Teacher> getAllTeachers() {
         return adminService.getAllTeachers();
     }
-    
+
+    @PutMapping("/teachers/{id}")
+    public Map<String, Object> updateTeacherInfo(@PathVariable Long id, @RequestBody Map<String, Object> profileData) {
+        return adminService.updateTeacherInfo(id, profileData);
+    }
+
     // 学生管理
     @GetMapping("/students")
     public List<Student> getAllStudents() {
         return adminService.getAllStudents();
     }
-    
+
+    @PutMapping("/students/{id}")
+    public Map<String, Object> updateStudentInfo(@PathVariable Long id, @RequestBody Map<String, Object> profileData) {
+        return adminService.updateStudentInfo(id, profileData);
+    }
+
     // 预约管理
     @GetMapping("/appointments")
     public List<Map<String, Object>> getAllAppointments() {

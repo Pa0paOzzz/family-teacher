@@ -110,16 +110,17 @@ export default {
             
             const response = await userApi.register(registerData);
             
-            if (response && response.id) {
+            if (response && response.success) {
               this.$message.success('注册成功，请登录');
               this.$router.push('/login');
             } else {
-              this.$message.error('注册失败，请稍后再试');
+              // 显示后端返回的具体错误信息
+              this.$message.error(response.error || '注册失败，请稍后再试');
             }
           } catch (error) {
             console.error('注册失败:', error);
-            if (error.response && error.response.status === 400) {
-              this.$message.error('用户名或邮箱已存在');
+            if (error.response && error.response.data) {
+              this.$message.error(error.response.data.error || '注册失败，请检查网络连接');
             } else {
               this.$message.error('注册失败，请检查网络连接');
             }
