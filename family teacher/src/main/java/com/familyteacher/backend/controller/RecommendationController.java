@@ -1,9 +1,10 @@
 package com.familyteacher.backend.controller;
 
-import com.familyteacher.backend.entity.TeacherJobPost;
+import com.familyteacher.backend.dto.RecommendationResponse;
+import com.familyteacher.backend.entity.Student;
 import com.familyteacher.backend.entity.StudentTutoringRequest;
 import com.familyteacher.backend.entity.Teacher;
-import com.familyteacher.backend.entity.Student;
+import com.familyteacher.backend.entity.TeacherJobPost;
 import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.service.RecommendationService;
 import com.familyteacher.backend.service.StudentService;
@@ -34,7 +35,7 @@ public class RecommendationController {
     private TeacherService teacherService;
 
     @GetMapping("/teachers-for-student")
-    public List<TeacherJobPost> recommendTeachersForStudent(HttpServletRequest request) {
+    public List<RecommendationResponse<TeacherJobPost>> recommendTeachersForStudent(HttpServletRequest request) {
         User user = getCurrentUser(request);
         if (user == null) {
             return List.of();
@@ -49,7 +50,7 @@ public class RecommendationController {
     }
 
     @GetMapping("/students-for-teacher")
-    public List<StudentTutoringRequest> recommendStudentsForTeacher(HttpServletRequest request) {
+    public List<RecommendationResponse<StudentTutoringRequest>> recommendStudentsForTeacher(HttpServletRequest request) {
         User user = getCurrentUser(request);
         if (user == null) {
             return List.of();

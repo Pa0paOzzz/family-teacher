@@ -96,10 +96,34 @@ export const evaluationApi = {
   check: (appointmentId) => api.get('/evaluations/check', { params: { appointmentId } })
 };
 
+export const chatApi = {
+  getContacts: () => api.get('/chat/contacts'),
+  getMessages: (userId) => api.get('/chat/messages', { params: { userId } }),
+  sendMessage: (data) => api.post('/chat/messages', data)
+};
+
 // 推荐相关API
 export const recommendationApi = {
-  getTeachersForStudent: () => api.get('/recommendations/teachers-for-student'),
-  getStudentsForTeacher: () => api.get('/recommendations/students-for-teacher')
+  getTeachersForStudent: () => api.get('/recommendations/teachers-for-student').then(items =>
+    (items || []).map(item => ({
+      ...(item?.resource || {}),
+      recommendationReason: item?.recommendationReason || '',
+      recommendationSource: item?.recommendationSource || '',
+      recommendationScore: item?.recommendationScore ?? null,
+      collaborativeScore: item?.collaborativeScore ?? null,
+      heuristicScore: item?.heuristicScore ?? null
+    }))
+  ),
+  getStudentsForTeacher: () => api.get('/recommendations/students-for-teacher').then(items =>
+    (items || []).map(item => ({
+      ...(item?.resource || {}),
+      recommendationReason: item?.recommendationReason || '',
+      recommendationSource: item?.recommendationSource || '',
+      recommendationScore: item?.recommendationScore ?? null,
+      collaborativeScore: item?.collaborativeScore ?? null,
+      heuristicScore: item?.heuristicScore ?? null
+    }))
+  )
 };
 
 // 收藏相关API

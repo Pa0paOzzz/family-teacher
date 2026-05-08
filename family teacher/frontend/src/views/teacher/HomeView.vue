@@ -31,14 +31,18 @@
             <span>我的预约</span>
           </el-menu-item>
           <el-menu-item index="5">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>在线对话</span>
+          </el-menu-item>
+          <el-menu-item index="6">
             <el-icon><Star /></el-icon>
             <span>我的收藏</span>
           </el-menu-item>
-          <el-menu-item index="6">
+          <el-menu-item index="7">
             <el-icon><Comment /></el-icon>
             <span>我的评价</span>
           </el-menu-item>
-          <el-menu-item index="7">
+          <el-menu-item index="8">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -84,6 +88,9 @@
 
                 <div class="card-content">
                   <p class="description">{{ request.description }}</p>
+                  <div v-if="request.recommendationReason" class="recommendation-reason">
+                    推荐理由：{{ request.recommendationReason }}
+                  </div>
                   <div class="info-row">
                     <el-icon><User /></el-icon>
                     <span>{{ getStudentName(request) }}</span>
@@ -210,6 +217,9 @@
             <el-descriptions-item label="地区" :span="2">
               {{ getLocationText(selectedRequest) || '未填写' }}
             </el-descriptions-item>
+            <el-descriptions-item label="推荐理由" :span="2">
+              {{ selectedRequest?.recommendationReason || '近期新发布' }}
+            </el-descriptions-item>
             <el-descriptions-item label="期望时间" :span="2">
               {{ selectedRequest?.preferredTime || '未填写' }}
             </el-descriptions-item>
@@ -241,6 +251,7 @@ import {
   School,
   Location,
   Clock,
+  ChatDotRound,
   HomeFilled,
   EditPen,
   Calendar,
@@ -269,6 +280,7 @@ export default {
     School,
     Location,
     Clock,
+    ChatDotRound,
     HomeFilled,
     EditPen,
     Calendar,
@@ -318,12 +330,15 @@ export default {
           this.$router.push('/teacher/appointments');
           break;
         case '5':
-          this.$router.push('/teacher/favorites');
+          this.$router.push('/teacher/chat');
           break;
         case '6':
-          this.$router.push('/teacher/evaluations');
+          this.$router.push('/teacher/favorites');
           break;
         case '7':
+          this.$router.push('/teacher/evaluations');
+          break;
+        case '8':
           this.logout();
           break;
       }
@@ -631,6 +646,16 @@ export default {
   line-height: 1.6;
   margin-bottom: 15px;
   min-height: 45px;
+}
+
+.recommendation-reason {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f0f9eb;
+  color: #67c23a;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .info-row {

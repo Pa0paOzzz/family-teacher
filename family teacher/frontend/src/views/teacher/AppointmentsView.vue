@@ -24,14 +24,18 @@
             <span>我的预约</span>
           </el-menu-item>
           <el-menu-item index="5">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>在线对话</span>
+          </el-menu-item>
+          <el-menu-item index="6">
             <el-icon><Star /></el-icon>
             <span>我的收藏</span>
           </el-menu-item>
-          <el-menu-item index="6">
+          <el-menu-item index="7">
             <el-icon><Comment /></el-icon>
             <span>我的评价</span>
           </el-menu-item>
-          <el-menu-item index="7">
+          <el-menu-item index="8">
             <el-icon><SwitchButton /></el-icon>
             <span>退出登录</span>
           </el-menu-item>
@@ -266,6 +270,14 @@
           </el-descriptions>
 
           <template #footer>
+            <el-button
+              v-if="selectedAppointment?.studentUserId"
+              type="primary"
+              plain
+              @click="goToChat"
+            >
+              立即聊天
+            </el-button>
             <el-button @click="detailDialogVisible = false">关闭</el-button>
           </template>
         </el-dialog>
@@ -303,7 +315,7 @@
 
 <script>
 import { appointmentApi, evaluationApi } from '../../api/api';
-import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment } from '@element-plus/icons-vue';
+import { User, HomeFilled, EditPen, Calendar, Star, SwitchButton, Comment, ChatDotRound } from '@element-plus/icons-vue';
 
 export default {
   name: 'TeacherAppointmentsView',
@@ -312,6 +324,7 @@ export default {
     HomeFilled,
     EditPen,
     Calendar,
+    ChatDotRound,
     Star,
     SwitchButton,
     Comment
@@ -365,12 +378,15 @@ export default {
           this.$router.push('/teacher/appointments');
           break;
         case '5':
-          this.$router.push('/teacher/favorites');
+          this.$router.push('/teacher/chat');
           break;
         case '6':
-          this.$router.push('/teacher/evaluations');
+          this.$router.push('/teacher/favorites');
           break;
         case '7':
+          this.$router.push('/teacher/evaluations');
+          break;
+        case '8':
           this.logout();
           break;
       }
@@ -449,6 +465,20 @@ export default {
     openDetailDialog(appointment) {
       this.selectedAppointment = appointment;
       this.detailDialogVisible = true;
+    },
+    goToChat() {
+      if (!this.selectedAppointment?.studentUserId) {
+        this.$message.warning('未找到可聊天的学生');
+        return;
+      }
+      this.detailDialogVisible = false;
+      this.$router.push({
+        path: '/teacher/chat',
+        query: {
+          userId: this.selectedAppointment.studentUserId,
+          name: this.selectedAppointment.studentName || ''
+        }
+      });
     },
     openEvaluateDialog(appointment) {
       this.selectedAppointment = appointment;
