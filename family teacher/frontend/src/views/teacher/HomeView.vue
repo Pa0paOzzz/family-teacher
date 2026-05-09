@@ -51,6 +51,12 @@
 
       <el-main class="main-content">
         <div class="search-container">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索标题、描述、学生、学校"
+            clearable
+            class="keyword-input"
+          />
           <el-select
             v-model="searchSubject"
             placeholder="选择学科"
@@ -70,6 +76,33 @@
             :district="searchLocation.district"
             @update="updateSearchLocation"
           />
+          <el-input-number
+            v-model="searchBudgetMin"
+            :min="0"
+            :step="10"
+            controls-position="right"
+            placeholder="最低预算"
+            class="price-input"
+          />
+          <span class="range-separator">-</span>
+          <el-input-number
+            v-model="searchBudgetMax"
+            :min="0"
+            :step="10"
+            controls-position="right"
+            placeholder="最高预算"
+            class="price-input"
+          />
+          <el-select
+            v-model="searchSort"
+            class="sort-select"
+            placeholder="排序方式"
+          >
+            <el-option label="默认排序" value="default" />
+            <el-option label="预算从低到高" value="priceAsc" />
+            <el-option label="预算从高到低" value="priceDesc" />
+            <el-option label="最新发布优先" value="latest" />
+          </el-select>
           <el-button type="primary" @click="searchRequests">搜索</el-button>
           <el-button @click="resetSearch">重置</el-button>
         </div>
@@ -244,7 +277,7 @@
 <script>
 import { recommendationApi, tutoringRequestApi, appointmentApi, favoriteApi, userApi } from '../../api/api';
 import LocationSelector from '../../components/LocationSelector.vue';
-import { getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { getDisplayLocation, matchesLocationSelection, normalizeLocationFields } from '../../utils/location';
 import { DATETIME_DISPLAY_FORMAT, DATETIME_VALUE_FORMAT, SUBJECT_OPTIONS } from '../../utils/formOptions';
 import {
   User,
@@ -292,7 +325,11 @@ export default {
   data() {
     return {
       activeIndex: '1',
+      searchKeyword: '',
       searchSubject: '',
+      searchBudgetMin: null,
+      searchBudgetMax: null,
+      searchSort: 'default',
       subjectOptions: SUBJECT_OPTIONS,
       datetimeValueFormat: DATETIME_VALUE_FORMAT,
       datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
@@ -376,9 +413,13 @@ export default {
       }
       try {
         const response = await tutoringRequestApi.getList();
-        this.requestList = (response || []).filter(request =>
-          this.matchesSubject(request.subject) && this.matchesLocation(request)
+        const filtered = (response || []).filter(request =>
+          this.matchesKeyword(request)
+          && this.matchesSubject(request.subject)
+          && this.matchesLocation(request)
+          && this.matchesPrice(request.budgetPerHour)
         );
+        this.requestList = this.sortSearchResults(filtered, 'budgetPerHour');
         this.emptyDescription = '暂无学生需求信息';
       } catch (error) {
         console.error('搜索失败:', error);
@@ -386,7 +427,11 @@ export default {
       }
     },
     resetSearch() {
+      this.searchKeyword = '';
       this.searchSubject = '';
+      this.searchBudgetMin = null;
+      this.searchBudgetMax = null;
+      this.searchSort = 'default';
       this.searchLocation = {
         province: '',
         city: '',
@@ -403,24 +448,63 @@ export default {
     },
     hasSearchFilters() {
       return Boolean(
+        this.searchKeyword ||
         this.searchSubject ||
+        this.searchBudgetMin != null ||
+        this.searchBudgetMax != null ||
         this.searchLocation.province ||
         this.searchLocation.city ||
-        this.searchLocation.district
+        this.searchLocation.district ||
+        this.searchSort !== 'default'
       );
+    },
+    matchesKeyword(request) {
+      if (!this.searchKeyword) {
+        return true;
+      }
+      const keyword = this.searchKeyword.trim().toLowerCase();
+      const searchText = [
+        request?.title,
+        request?.description,
+        request?.subject,
+        request?.student?.user?.name,
+        request?.student?.school,
+        request?.student?.grade,
+        request?.student?.major
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return searchText.includes(keyword);
     },
     matchesSubject(subject) {
       return !this.searchSubject || subject === this.searchSubject;
     },
-    matchesLocation(item) {
-      const { province, city, district } = this.searchLocation;
-      if (!province && !city && !district) {
-        return true;
+    matchesPrice(price) {
+      const numericPrice = Number(price || 0);
+      if (this.searchBudgetMin != null && numericPrice < this.searchBudgetMin) {
+        return false;
       }
-      const normalized = normalizeLocationFields('location', item);
-      return (!province || normalized.locationProvince === province)
-        && (!city || normalized.locationCity === city)
-        && (!district || normalized.locationDistrict === district);
+      if (this.searchBudgetMax != null && numericPrice > this.searchBudgetMax) {
+        return false;
+      }
+      return true;
+    },
+    matchesLocation(item) {
+      return matchesLocationSelection('location', item, this.searchLocation);
+    },
+    sortSearchResults(items, priceField) {
+      const results = [...items];
+      switch (this.searchSort) {
+        case 'priceAsc':
+          return results.sort((a, b) => (Number(a?.[priceField] || 0) - Number(b?.[priceField] || 0)) || ((b?.id || 0) - (a?.id || 0)));
+        case 'priceDesc':
+          return results.sort((a, b) => (Number(b?.[priceField] || 0) - Number(a?.[priceField] || 0)) || ((b?.id || 0) - (a?.id || 0)));
+        case 'latest':
+          return results.sort((a, b) => new Date(b?.updatedAt || b?.createdAt || 0) - new Date(a?.updatedAt || a?.createdAt || 0));
+        default:
+          return results;
+      }
     },
     isFavorited(resourceId) {
       return this.favoriteIds.includes(resourceId);
@@ -597,8 +681,24 @@ export default {
   flex-wrap: wrap;
 }
 
+.keyword-input {
+  width: 260px;
+}
+
 .subject-select {
   width: 200px;
+}
+
+.price-input {
+  width: 150px;
+}
+
+.sort-select {
+  width: 160px;
+}
+
+.range-separator {
+  color: #909399;
 }
 
 .requests-container {

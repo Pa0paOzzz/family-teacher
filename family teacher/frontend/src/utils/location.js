@@ -119,3 +119,42 @@ export function getDisplayLocation(item, prefix) {
     district: item?.[`${prefix}District`]
   });
 }
+
+function normalizeLocationText(text) {
+  return String(text || '')
+    .replace(/[，,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function matchesLocationSelection(prefix, source = {}, selected = {}) {
+  const { province = '', city = '', district = '' } = selected;
+  if (!province && !city && !district) {
+    return true;
+  }
+
+  const normalized = normalizeLocationFields(prefix, source);
+  const provinceValue = normalized[`${prefix}Province`] || '';
+  const cityValue = normalized[`${prefix}City`] || '';
+  const districtValue = normalized[`${prefix}District`] || '';
+
+  const structuredMatch = (!province || provinceValue === province)
+    && (!city || cityValue === city)
+    && (!district || districtValue === district);
+
+  if (structuredMatch) {
+    return true;
+  }
+
+  const locationText = normalizeLocationText(
+    normalized[`${prefix}Formatted`] || normalized[prefix] || source?.[`${prefix}Formatted`] || source?.[prefix]
+  );
+
+  if (!locationText) {
+    return false;
+  }
+
+  return (!province || locationText.includes(province))
+    && (!city || locationText.includes(city))
+    && (!district || locationText.includes(district));
+}

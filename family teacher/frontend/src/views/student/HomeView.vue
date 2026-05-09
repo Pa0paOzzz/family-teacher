@@ -45,6 +45,12 @@
       <el-main>
         <div class="main-content">
           <div class="search-container">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索标题、描述、老师、学校"
+              clearable
+              class="keyword-input"
+            />
             <el-select
               v-model="searchSubject"
               placeholder="选择学科"
@@ -64,6 +70,33 @@
               :district="searchLocation.district"
               @update="updateSearchLocation"
             />
+            <el-input-number
+              v-model="searchPriceMin"
+              :min="0"
+              :step="10"
+              controls-position="right"
+              placeholder="最低课时费"
+              class="price-input"
+            />
+            <span class="range-separator">-</span>
+            <el-input-number
+              v-model="searchPriceMax"
+              :min="0"
+              :step="10"
+              controls-position="right"
+              placeholder="最高课时费"
+              class="price-input"
+            />
+            <el-select
+              v-model="searchSort"
+              class="sort-select"
+              placeholder="排序方式"
+            >
+              <el-option label="默认排序" value="default" />
+              <el-option label="价格从低到高" value="priceAsc" />
+              <el-option label="价格从高到低" value="priceDesc" />
+              <el-option label="最新发布优先" value="latest" />
+            </el-select>
             <el-button type="primary" @click="searchJobPosts">搜索</el-button>
             <el-button @click="resetSearch">重置</el-button>
           </div>
@@ -236,7 +269,7 @@
 <script>
 import { recommendationApi, jobPostApi, appointmentApi, favoriteApi, userApi } from '../../api/api';
 import LocationSelector from '../../components/LocationSelector.vue';
-import { getDisplayLocation, normalizeLocationFields } from '../../utils/location';
+import { getDisplayLocation, matchesLocationSelection, normalizeLocationFields } from '../../utils/location';
 import { DATETIME_DISPLAY_FORMAT, DATETIME_VALUE_FORMAT, SUBJECT_OPTIONS } from '../../utils/formOptions';
 import {
   User,
@@ -284,7 +317,11 @@ export default {
   data() {
     return {
       activeIndex: '1',
+      searchKeyword: '',
       searchSubject: '',
+      searchPriceMin: null,
+      searchPriceMax: null,
+      searchSort: 'default',
       subjectOptions: SUBJECT_OPTIONS,
       datetimeValueFormat: DATETIME_VALUE_FORMAT,
       datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
@@ -366,9 +403,13 @@ export default {
       }
       try {
         const response = await jobPostApi.getList();
-        this.jobPostList = (response || []).filter(post =>
-          this.matchesSubject(post.subject) && this.matchesLocation(post)
+        const filtered = (response || []).filter(post =>
+          this.matchesKeyword(post)
+          && this.matchesSubject(post.subject)
+          && this.matchesLocation(post)
+          && this.matchesPrice(post.pricePerHour)
         );
+        this.jobPostList = this.sortSearchResults(filtered, 'pricePerHour');
         this.emptyDescription = '暂无教师求职信息';
       } catch (error) {
         console.error('搜索失败:', error);
@@ -376,7 +417,11 @@ export default {
       }
     },
     resetSearch() {
+      this.searchKeyword = '';
       this.searchSubject = '';
+      this.searchPriceMin = null;
+      this.searchPriceMax = null;
+      this.searchSort = 'default';
       this.searchLocation = {
         province: '',
         city: '',
@@ -393,24 +438,62 @@ export default {
     },
     hasSearchFilters() {
       return Boolean(
+        this.searchKeyword ||
         this.searchSubject ||
+        this.searchPriceMin != null ||
+        this.searchPriceMax != null ||
         this.searchLocation.province ||
         this.searchLocation.city ||
-        this.searchLocation.district
+        this.searchLocation.district ||
+        this.searchSort !== 'default'
       );
+    },
+    matchesKeyword(post) {
+      if (!this.searchKeyword) {
+        return true;
+      }
+      const keyword = this.searchKeyword.trim().toLowerCase();
+      const searchText = [
+        post?.title,
+        post?.description,
+        post?.subject,
+        post?.teacher?.user?.name,
+        post?.teacher?.school,
+        post?.teacher?.major
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return searchText.includes(keyword);
     },
     matchesSubject(subject) {
       return !this.searchSubject || subject === this.searchSubject;
     },
-    matchesLocation(item) {
-      const { province, city, district } = this.searchLocation;
-      if (!province && !city && !district) {
-        return true;
+    matchesPrice(price) {
+      const numericPrice = Number(price || 0);
+      if (this.searchPriceMin != null && numericPrice < this.searchPriceMin) {
+        return false;
       }
-      const normalized = normalizeLocationFields('location', item);
-      return (!province || normalized.locationProvince === province)
-        && (!city || normalized.locationCity === city)
-        && (!district || normalized.locationDistrict === district);
+      if (this.searchPriceMax != null && numericPrice > this.searchPriceMax) {
+        return false;
+      }
+      return true;
+    },
+    matchesLocation(item) {
+      return matchesLocationSelection('location', item, this.searchLocation);
+    },
+    sortSearchResults(items, priceField) {
+      const results = [...items];
+      switch (this.searchSort) {
+        case 'priceAsc':
+          return results.sort((a, b) => (Number(a?.[priceField] || 0) - Number(b?.[priceField] || 0)) || ((b?.id || 0) - (a?.id || 0)));
+        case 'priceDesc':
+          return results.sort((a, b) => (Number(b?.[priceField] || 0) - Number(a?.[priceField] || 0)) || ((b?.id || 0) - (a?.id || 0)));
+        case 'latest':
+          return results.sort((a, b) => new Date(b?.updatedAt || b?.createdAt || 0) - new Date(a?.updatedAt || a?.createdAt || 0));
+        default:
+          return results;
+      }
     },
     isFavorited(resourceId) {
       return this.favoriteIds.includes(resourceId);
@@ -594,8 +677,24 @@ export default {
   flex-wrap: wrap;
 }
 
+.keyword-input {
+  width: 260px;
+}
+
 .subject-select {
   width: 200px;
+}
+
+.price-input {
+  width: 150px;
+}
+
+.sort-select {
+  width: 160px;
+}
+
+.range-separator {
+  color: #909399;
 }
 
 .job-posts-container {
