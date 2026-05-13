@@ -134,7 +134,7 @@ export default {
   },
   data() {
     return {
-      activeIndex: '6',
+      activeIndex: '7',
       myEvaluations: [],
       receivedEvaluations: []
     }

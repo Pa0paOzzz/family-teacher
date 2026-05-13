@@ -6,7 +6,7 @@ import com.familyteacher.backend.entity.User;
 import com.familyteacher.backend.repository.UserRepository;
 import com.familyteacher.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,7 +29,8 @@ public class UserService {
     @Autowired
     private TeacherService teacherService;
 
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public Map<String, Object> register(User user) {
         Map<String, Object> response = new HashMap<>();
@@ -92,12 +93,19 @@ public class UserService {
     }
 
     public User getUserFromToken(String token) {
-        if (token == null) {
+        if (!StringUtils.hasText(token) || !jwtUtil.validateToken(token)) {
             return null;
         }
-        String username = jwtUtil.getUsernameFromToken(token);
-        User user = userRepository.findByUsername(username).orElse(null);
-        return user == null || Boolean.TRUE.equals(user.getDeleted()) ? null : user;
+        try {
+            String username = jwtUtil.getUsernameFromToken(token);
+            User user = userRepository.findByUsername(username).orElse(null);
+            if (user == null || Boolean.TRUE.equals(user.getDeleted()) || Boolean.FALSE.equals(user.getEnabled())) {
+                return null;
+            }
+            return user;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public Map<String, Object> getUserProfile(User user) {

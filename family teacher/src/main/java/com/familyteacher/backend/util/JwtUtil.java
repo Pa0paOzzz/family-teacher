@@ -5,6 +5,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +21,7 @@ public class JwtUtil {
     private Long expiration;
     
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
     
     public String generateToken(String username) {
@@ -42,6 +44,9 @@ public class JwtUtil {
     
     public boolean validateToken(String token) {
         try {
+            if (token == null || token.isBlank()) {
+                return false;
+            }
             Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()

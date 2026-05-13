@@ -196,7 +196,7 @@ export default {
   },
   data() {
     return {
-      activeIndex: '5',
+      activeIndex: '6',
       datetimeValueFormat: DATETIME_VALUE_FORMAT,
       datetimeDisplayFormat: DATETIME_DISPLAY_FORMAT,
       favoriteList: [],

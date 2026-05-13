@@ -135,7 +135,7 @@ export default {
   },
   data() {
     return {
-      activeIndex: '5',
+      activeIndex: '6',
       favoriteList: [],
       contactDialogVisible: false,
       selectedFavorite: null,
